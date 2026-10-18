@@ -1,0 +1,5 @@
+node_modules/
+release/*.vsix
+release/*.json
+.vscode-test/
+npm-debug.log*
