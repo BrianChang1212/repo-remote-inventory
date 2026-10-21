@@ -37,7 +37,7 @@ async function main() {
   fs.mkdirSync(release, { recursive: true });
   await createVSIX({ cwd: root, packagePath: vsix, dependencies: false, allowMissingRepository: true });
   const { names, packagedManifest } = await inspectZip(vsix);
-  for (const required of ['extension/package.json', 'extension/source/extension.js', 'extension/source/git-state.js', 'extension/resources/inventory.svg', 'extension/resources/extension-icon.png', 'extension/readme.md', 'extension/LICENSE.txt']) {
+  for (const required of ['extension/package.json', 'extension/source/extension.js', 'extension/source/dashboard.js', 'extension/source/sidebar.js', 'extension/source/git-state.js', 'extension/resources/inventory.svg', 'extension/resources/extension-icon.png', 'extension/readme.md', 'extension/LICENSE.txt']) {
     if (!names.includes(required)) throw new Error(`VSIX is missing ${required}`);
   }
   if (names.some(name => /^extension\/(?:test|tool|release|node_modules|\.git)\//.test(name))) {

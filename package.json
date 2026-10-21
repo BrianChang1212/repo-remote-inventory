@@ -3,7 +3,7 @@
   "displayName": "Repo Remote Inventory",
   "description": "Inspect local Git repositories and their remote branches from a VS Code sidebar.",
   "icon": "resources/extension-icon.png",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "brian-chang",
   "license": "MIT",
   "engines": { "vscode": "^1.90.0" },
@@ -26,18 +26,27 @@
       { "command": "repoRemoteInventory.refreshAll", "title": "Repo Remote Inventory: Refresh All", "icon": "$(refresh)" },
       { "command": "repoRemoteInventory.refreshRepository", "title": "Repo Remote Inventory: Refresh Repository", "icon": "$(refresh)" },
       { "command": "repoRemoteInventory.chooseRoot", "title": "Repo Remote Inventory: Choose Scan Directory" },
-      { "command": "repoRemoteInventory.chooseList", "title": "Repo Remote Inventory: Choose Repository List" }
+      { "command": "repoRemoteInventory.chooseList", "title": "Repo Remote Inventory: Choose Repository List" },
+      { "command": "repoRemoteInventory.toggleAutoRefresh", "title": "Repo Remote Inventory: Manual Mode", "icon": "$(circle-slash)" },
+      { "command": "repoRemoteInventory.enableAutoRefresh", "title": "Repo Remote Inventory: Auto Mode", "icon": "$(sync)" },
+      { "command": "repoRemoteInventory.openDashboard", "title": "Repo Remote Inventory: Open Dashboard", "icon": "$(graph)" },
+      { "command": "repoRemoteInventory.dashboardRefresh", "title": "Refresh Dashboard", "icon": "$(refresh)" }
     ],
     "viewsContainers": { "activitybar": [{ "id": "repoRemoteInventory", "title": "Repo Inventory", "icon": "resources/inventory.svg" }] },
-    "views": { "repoRemoteInventory": [{ "id": "repoRemoteInventory.repositories", "name": "Repositories" }] },
+    "views": { "repoRemoteInventory": [{ "id": "repoRemoteInventory.repositories", "name": "Repositories", "type": "webview" }] },
     "menus": {
-      "view/title": [{ "command": "repoRemoteInventory.refreshAll", "when": "view == repoRemoteInventory.repositories", "group": "navigation" }],
-      "view/item/context": [{ "command": "repoRemoteInventory.refreshRepository", "when": "view == repoRemoteInventory.repositories && viewItem == repository", "group": "inline" }]
+      "view/title": [
+        { "command": "repoRemoteInventory.refreshAll", "when": "view == repoRemoteInventory.repositories", "group": "navigation@1" },
+        { "command": "repoRemoteInventory.toggleAutoRefresh", "when": "view == repoRemoteInventory.repositories && repoRemoteInventory.autoMode", "group": "navigation@2" },
+        { "command": "repoRemoteInventory.enableAutoRefresh", "when": "view == repoRemoteInventory.repositories && !repoRemoteInventory.autoMode", "group": "navigation@2" },
+        { "command": "repoRemoteInventory.openDashboard", "when": "view == repoRemoteInventory.repositories", "group": "navigation@3" }
+      ],
+      "webview/title": [{ "command": "repoRemoteInventory.dashboardRefresh", "when": "webviewId == repoRemoteInventory.dashboard", "group": "navigation" }]
     },
     "configuration": {
       "title": "Repo Remote Inventory",
       "properties": {
-        "repoRemoteInventory.autoRefreshOnOpen": { "type": "boolean", "default": true, "description": "Refresh online when the inventory view opens." },
+        "repoRemoteInventory.autoRefreshOnOpen": { "type": "boolean", "scope": "application", "default": true, "description": "Refresh online when the sidebar or dashboard opens." },
         "repoRemoteInventory.listFile": { "type": "string", "default": "", "description": "Path to a repo_paths.json-compatible list. Empty uses recursive discovery." },
         "repoRemoteInventory.rootPath": { "type": "string", "default": "", "description": "Root directory for relative list paths or recursive discovery. Empty uses the open workspace folder." },
         "repoRemoteInventory.excludePaths": { "type": "array", "items": { "type": "string" }, "default": ["node_modules", ".venv"], "description": "Directory names or root-relative paths to exclude from discovery." },

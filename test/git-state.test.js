@@ -18,7 +18,14 @@ function git(cwd, ...args) {
 
 test('compares live remote state without changing tracking refs or the worktree', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'inventory-git-'));
+  const oldGitConfigGlobal = process.env.GIT_CONFIG_GLOBAL;
+  const oldGitConfigNoSystem = process.env.GIT_CONFIG_NOSYSTEM;
+  const oldXdgConfigHome = process.env.XDG_CONFIG_HOME;
   try {
+    process.env.GIT_CONFIG_GLOBAL = path.join(root, 'gitconfig');
+    process.env.GIT_CONFIG_NOSYSTEM = '1';
+    process.env.XDG_CONFIG_HOME = path.join(root, 'xdg');
+    fs.writeFileSync(process.env.GIT_CONFIG_GLOBAL, '');
     const bare = path.join(root, 'remote.git');
     const repo = path.join(root, 'repo');
     const other = path.join(root, 'other');
@@ -61,7 +68,15 @@ test('compares live remote state without changing tracking refs or the worktree'
     assert.equal(state.status, 'DIFFERS_UNFETCHED');
     assert.equal(git(repo, 'rev-parse', 'refs/remotes/origin/main'), trackingBefore);
     assert.equal(git(repo, 'status', '--porcelain').split(/\r?\n/).length, 1);
-  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+  } finally {
+    if (oldGitConfigGlobal === undefined) delete process.env.GIT_CONFIG_GLOBAL;
+    else process.env.GIT_CONFIG_GLOBAL = oldGitConfigGlobal;
+    if (oldGitConfigNoSystem === undefined) delete process.env.GIT_CONFIG_NOSYSTEM;
+    else process.env.GIT_CONFIG_NOSYSTEM = oldGitConfigNoSystem;
+    if (oldXdgConfigHome === undefined) delete process.env.XDG_CONFIG_HOME;
+    else process.env.XDG_CONFIG_HOME = oldXdgConfigHome;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test('reports missing and mismatched remotes without querying them', async () => {

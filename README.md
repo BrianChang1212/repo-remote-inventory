@@ -1,13 +1,20 @@
 # Repo Remote Inventory
 
-Inspect local Git working trees and remote branch status from a VS Code sidebar. The view refreshes online whenever it opens by default. You can disable auto-refresh and refresh all repositories or a single repository manually.
+Inspect local Git working trees and remote branch status from a graphite-and-green VS Code sidebar and a dashboard tab. Automatic refresh is enabled by default. Switch between automatic and manual refresh from either view; the choice is saved in VS Code's global settings.
 
 ## Usage
 
 1. Install the extension and ensure `git` is available on your `PATH`.
 2. Open a local folder and select **Repo Inventory** in the Activity Bar.
-3. Expand a repository to see its comparison target, branch, SHA, ahead/behind counts, working-tree changes, and check time.
-4. Use the refresh button in the view title to refresh all repositories. Use the refresh button on an individual repository to refresh only that repository.
+3. Read the status summary and expand a repository card to see its comparison target, branch, SHA, ahead/behind counts, working-tree changes, and check time.
+4. Use **Refresh all** in the sidebar to refresh every repository, or **Refresh repository** inside an expanded card to refresh one.
+5. Use the sidebar's **Auto refresh** control to enable or disable online refresh when the view opens. Select **Dashboard** to see status counts, a chart, and a repository list in an editor tab. Select a chart bar to filter the list, or clear the filter to show every repository.
+
+## Refresh modes and saved results
+
+Automatic mode refreshes when the sidebar or dashboard opens. Switching from manual to automatic mode starts a refresh immediately. If a refresh is already running, both views share that operation. Manual mode performs online queries only when you use a refresh command.
+
+The extension saves the last results for each scan scope locally, so manual mode can show them after VS Code restarts. The dashboard displays the last successful check time and marks historical or failed results as stale. A saved result is a snapshot, not proof of the current remote state. The chart keeps remote synchronization status separate from stale results and uncommitted working-tree changes.
 
 By default, the extension recursively discovers Git roots at any depth under the current VS Code folder. This includes nested projects and worktrees represented by a `.git` file. Discovery does not follow symlinks or junctions and does not enter `.git` directories. `node_modules` and `.venv` are excluded by default; configure `repoRemoteInventory.excludePaths` to add directory names or paths relative to the scan root. Initial discovery can take time for large folders. Unreadable subdirectories produce warnings, and results cover only the readable paths.
 
@@ -49,7 +56,7 @@ If a refresh fails after a successful result, the extension preserves the previo
 
 | Setting | Default | Purpose |
 |---|---|---|
-| `autoRefreshOnOpen` | `true` | Refresh online whenever the view opens. |
+| `autoRefreshOnOpen` | `true` | Refresh online when the sidebar or dashboard opens. The visible mode controls update this global setting. |
 | `listFile` | Empty string | Path to a compatible `repo_paths.json` list. |
 | `rootPath` | Empty string | Scan root; an empty value uses the current folder. |
 | `excludePaths` | `node_modules`, `.venv` | Directories excluded during recursive discovery. |
