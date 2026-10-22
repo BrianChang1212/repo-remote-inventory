@@ -29,6 +29,14 @@ async function scanTargets(targets, options = {}) {
   const concurrency = Math.max(1, Math.min(options.maxParallel || 8, selected.length || 1));
   async function worker() {
     while (next < selected.length) {
+      while (options.priority?.length) {
+        const requested = options.priority.shift();
+        const index = selected.findIndex((target, position) => position >= next && target.path === requested);
+        if (index >= next) {
+          [selected[next], selected[index]] = [selected[index], selected[next]];
+          break;
+        }
+      }
       const target = selected[next++];
       let fresh;
       try { fresh = await inspect(target, { timeoutMs: options.timeoutMs, signal: options.signal }); }

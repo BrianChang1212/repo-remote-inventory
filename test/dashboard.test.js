@@ -17,6 +17,9 @@ test('dashboard provides an auto toggle, exact status filters, separate stale an
   assert.match(html, /Last check:/);
   assert.match(html, /clear/);
   assert.match(html, /toggleAuto/);
+  assert.match(html, /--accent:#89e829/);
+  assert.match(html, /<details/);
+  assert.match(html, /refreshRepository/);
 });
 
 test('dashboard message renders rows and chart filters narrow rows until cleared', () => {
@@ -27,6 +30,7 @@ test('dashboard message renders rows and chart filters narrow rows until cleared
   let receiveMessage;
   const document = {
     querySelector: id => elements.get(id),
+    addEventListener(type, handler) { if (type === 'click') this.onClick = handler; },
     querySelectorAll: () => {
       statusButtons = [...elements.get('#chart').innerHTML.matchAll(/data-status="([^"]+)"/g)].map(match => ({ dataset: { status: match[1] }, onclick: null }));
       return statusButtons;
@@ -51,6 +55,7 @@ test('dashboard message renders rows and chart filters narrow rows until cleared
   assert.match(elements.get('#meta').textContent, /Last check: /);
   assert.match(elements.get('#rows').innerHTML, /same/);
   assert.match(elements.get('#rows').innerHTML, /STALE/);
+  assert.match(elements.get('#rows').innerHTML, /data-action="refreshRepository"/);
   statusButtons.find(button => button.dataset.status === 'AHEAD').onclick();
   assert.match(elements.get('#rows').innerHTML, /other/);
   assert.doesNotMatch(elements.get('#rows').innerHTML, /same/);
@@ -63,8 +68,15 @@ test('dashboard message renders rows and chart filters narrow rows until cleared
   assert.equal(posted[1].command, 'toggleAuto');
   elements.get('#refresh').onclick();
   assert.equal(posted[2].command, 'refresh');
+  document.onClick({ target: { closest: () => ({ dataset: { path: '/two' } }) } });
+  assert.equal(posted[3].command, 'refreshRepository');
+  assert.equal(posted[3].path, '/two');
   receiveMessage({ data: { type: 'mode', autoMode: true } });
   assert.equal(elements.get('#mode').textContent, 'Mode: Auto');
   receiveMessage({ data: { type: 'mode', autoMode: false } });
   assert.equal(elements.get('#mode').textContent, 'Mode: Manual');
+  receiveMessage({ data: { type: 'rows', rows: [{ path: '/bad', label: '<img src=x>', status: 'IN_SYNC', dirty: '<script>x</script>' }] } });
+  assert.match(elements.get('#rows').innerHTML, /&lt;img src=x&gt;/);
+  assert.match(elements.get('#rows').innerHTML, /&lt;script&gt;x&lt;\/script&gt;/);
+  assert.doesNotMatch(elements.get('#rows').innerHTML, /<img|<script>/);
 });

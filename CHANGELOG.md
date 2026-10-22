@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1
+
+- Restyle the dashboard to match the NVIDIA-inspired sidebar and use expandable repository cards with visible per-repository refresh buttons.
+- Keep cached rows visible during background refresh and mark each row stale until its new result arrives.
+- Prioritize deduplicated per-repository requests during a full scan and batch webview updates to keep the interface responsive.
+
 ## 0.2.0
 
 - Replace the native repository tree with an expandable graphite-and-green sidebar webview inspired by Task Reports.

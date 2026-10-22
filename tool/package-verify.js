@@ -48,9 +48,11 @@ async function main() {
   }
   const sha256 = crypto.createHash('sha256').update(fs.readFileSync(vsix)).digest('hex');
   const git = spawnSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8' });
+  const gitStatus = spawnSync('git', ['-C', root, 'status', '--porcelain', '--untracked-files=no'], { encoding: 'utf8' });
   const record = {
     file: path.basename(vsix), version: manifest.version, publisher: manifest.publisher,
     sha256, sourceCommit: git.status === 0 ? git.stdout.trim() : null,
+    sourceDirty: gitStatus.status === 0 ? gitStatus.stdout.trim().length > 0 : null,
     builtAt: new Date().toISOString(), platform: `${process.platform}-${process.arch}`,
     packagedFiles: names.length,
   };

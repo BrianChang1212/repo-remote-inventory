@@ -57,6 +57,8 @@ test('webview sidebar shares refresh commands and keeps manual open offline', as
   let visibility;
   let auto = false;
   let dashboardOpened = 0;
+  let dashboardReceive;
+  const scanPaths = [];
   const view = {
     visible: false,
     webview: { cspSource: 'vscode-webview:', postMessage: message => posted.push(message), onDidReceiveMessage(handler) { receive = handler; return { dispose() {} }; } },
@@ -68,7 +70,7 @@ test('webview sidebar shares refresh commands and keeps manual open offline', as
       registerWebviewViewProvider(_id, instance) { provider = instance; return { dispose() {} }; },
       createWebviewPanel() {
         dashboardOpened++;
-        return { webview: { cspSource: 'vscode-webview:', onDidReceiveMessage: () => ({ dispose() {} }) }, reveal() {}, onDidDispose: () => ({ dispose() {} }), onDidChangeViewState: () => ({ dispose() {} }) };
+        return { webview: { cspSource: 'vscode-webview:', onDidReceiveMessage(handler) { dashboardReceive = handler; return { dispose() {} }; } }, reveal() {}, onDidDispose: () => ({ dispose() {} }), onDidChangeViewState: () => ({ dispose() {} }) };
       },
       showErrorMessage: async () => {},
     },
@@ -79,7 +81,7 @@ test('webview sidebar shares refresh commands and keeps manual open offline', as
   };
   const extension = start(vscode, { subscriptions: [] }, {
     resolveTargets: async () => ({ targets: [{ path: '/repo', label: 'repo' }], warnings: [] }),
-    scanTargets: async targets => { scanCount++; return targets.map(row => ({ ...row, status: 'IN_SYNC' })); },
+    scanTargets: async (targets, options) => { scanCount++; scanPaths.push(options.onlyPath); return targets.map(row => ({ ...row, status: 'IN_SYNC' })); },
   });
   provider.resolveWebviewView(view);
   receive({ command: 'ready' });
@@ -95,12 +97,16 @@ test('webview sidebar shares refresh commands and keeps manual open offline', as
   assert.equal(scanCount, 2);
   receive({ command: 'openDashboard' });
   assert.equal(dashboardOpened, 1);
+  dashboardReceive({ command: 'refreshRepository', path: '/repo' });
+  await extension.whenIdle();
+  assert.equal(scanPaths.at(-1), '/repo');
+  assert.equal(scanCount, 3);
   receive({ command: 'refreshRepository', path: '/unlisted' });
   await extension.whenIdle();
-  assert.equal(scanCount, 2);
+  assert.equal(scanCount, 3);
   receive({ command: 'toggleAuto' });
   await new Promise(resolve => setImmediate(resolve));
   await extension.whenIdle();
   assert.equal(auto, true);
-  assert.equal(scanCount, 3);
+  assert.equal(scanCount, 4);
 });

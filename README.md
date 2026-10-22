@@ -1,5 +1,7 @@
 # Repo Remote Inventory
 
+![Repo Remote Inventory extension icon](resources/extension-icon.png)
+
 Inspect local Git working trees and remote branch status from a graphite-and-green VS Code sidebar and a dashboard tab. Automatic refresh is enabled by default. Switch between automatic and manual refresh from either view; the choice is saved in VS Code's global settings.
 
 ## Usage
@@ -8,13 +10,13 @@ Inspect local Git working trees and remote branch status from a graphite-and-gre
 2. Open a local folder and select **Repo Inventory** in the Activity Bar.
 3. Read the status summary and expand a repository card to see its comparison target, branch, SHA, ahead/behind counts, working-tree changes, and check time.
 4. Use **Refresh all** in the sidebar to refresh every repository, or **Refresh repository** inside an expanded card to refresh one.
-5. Use the sidebar's **Auto refresh** control to enable or disable online refresh when the view opens. Select **Dashboard** to see status counts, a chart, and a repository list in an editor tab. Select a chart bar to filter the list, or clear the filter to show every repository.
+5. Use the sidebar's **Auto refresh** control to enable or disable online refresh when the view opens. Select **Dashboard** to see status counts, a chart, and an expandable repository list in an editor tab. Each dashboard row has its own refresh button. Select a chart bar to filter the list, or clear the filter to show every repository.
 
 ## Refresh modes and saved results
 
 Automatic mode refreshes when the sidebar or dashboard opens. Switching from manual to automatic mode starts a refresh immediately. If a refresh is already running, both views share that operation. Manual mode performs online queries only when you use a refresh command.
 
-The extension saves the last results for each scan scope locally, so manual mode can show them after VS Code restarts. The dashboard displays the last successful check time and marks historical or failed results as stale. A saved result is a snapshot, not proof of the current remote state. The chart keeps remote synchronization status separate from stale results and uncommitted working-tree changes.
+The extension saves the last results for each scan scope locally, so manual mode can show them after VS Code restarts. Refresh keeps those results visible while online checks run in the background. Each row stays stale until its new check completes; the dashboard labels mixed old and new results as a snapshot. A saved result is not proof of the current remote state. The chart keeps remote synchronization status separate from stale results and uncommitted working-tree changes. During a full scan, individual refresh requests receive the next available scan slot without duplicating an in-flight check.
 
 By default, the extension recursively discovers Git roots at any depth under the current VS Code folder. This includes nested projects and worktrees represented by a `.git` file. Discovery does not follow symlinks or junctions and does not enter `.git` directories. `node_modules` and `.venv` are excluded by default; configure `repoRemoteInventory.excludePaths` to add directory names or paths relative to the scan root. Initial discovery can take time for large folders. Unreadable subdirectories produce warnings, and results cover only the readable paths.
 
@@ -63,7 +65,7 @@ If a refresh fails after a successful result, the extension preserves the previo
 | `maxParallel` | `8` | Maximum simultaneous repository queries. |
 | `timeoutSeconds` | `20` | Timeout for each remote query. |
 
-The first release supports desktop VS Code on local Windows, macOS, and Linux and requires Git on `PATH`. WSL/SSH workspaces and VS Code for the Web are not supported. The extension is disabled in untrusted workspaces to avoid automatically running Git with workspace-provided configuration.
+The current supported platform is desktop VS Code on local Windows, with Git on `PATH`. macOS, Linux, WSL/SSH workspaces, and VS Code for the Web are not supported yet. The extension is disabled in untrusted workspaces to avoid automatically running Git with workspace-provided configuration.
 
 ## Development and verification
 

@@ -41,6 +41,8 @@ test('opening the view refreshes by default, while manual refresh works when aut
   let autoRefresh = true;
   let scans = 0;
   const scanOptions = [];
+  let holdNext = false;
+  let releaseScan;
   const view = {
     visible: false,
     onDidChangeVisibility(handler) { visibilityChanged = handler; return { dispose() {} }; },
@@ -61,7 +63,11 @@ test('opening the view refreshes by default, while manual refresh works when aut
   };
   const extension = start(vscode, { subscriptions: [] }, {
     resolveTargets: async () => ({ targets: [{ path: '/workspace/repo', label: 'repo' }], warnings: [] }),
-    scanTargets: async (targets, options) => { scans++; scanOptions.push(options); return targets.map(target => ({ ...target, status: 'IN_SYNC' })); },
+    scanTargets: async (targets, options) => {
+      scans++; scanOptions.push(options);
+      if (holdNext) await new Promise(resolve => { releaseScan = resolve; });
+      return targets.map(target => ({ ...target, status: 'IN_SYNC' }));
+    },
   });
   visibilityChanged({ visible: true });
   await extension.whenIdle();
@@ -75,6 +81,17 @@ test('opening the view refreshes by default, while manual refresh works when aut
   await commands.get('repoRemoteInventory.refreshRepository')({ path: '/workspace/repo' });
   assert.equal(scans, 3);
   assert.equal(scanOptions[2].onlyPath, '/workspace/repo');
+  holdNext = true;
+  const fullRefresh = commands.get('repoRemoteInventory.refreshAll')();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(commands.get('repoRemoteInventory.refreshAll')(), fullRefresh);
+  assert.equal(extension.provider.rows[0].stale, true);
+  void commands.get('repoRemoteInventory.refreshRepository')({ path: '/workspace/repo' });
+  void commands.get('repoRemoteInventory.refreshRepository')({ path: '/workspace/repo' });
+  assert.deepEqual(scanOptions[3].priority, ['/workspace/repo']);
+  releaseScan();
+  await fullRefresh;
+  assert.equal(scans, 4);
 });
 
 test('a repository-list warning remains visible after the scan completes', async () => {
