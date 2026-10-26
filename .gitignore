@@ -6,5 +6,6 @@ release/sidebar-host.png
 release/host-profile/
 release/host-extensions/
 release/chrome-preview-profile/
+release/chrome-*-profile/
 .vscode-test/
 npm-debug.log*
