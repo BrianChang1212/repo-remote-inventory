@@ -1,31 +1,32 @@
 const fs = require('node:fs');
 const path = require('node:path');
+const { englishT } = require('./l10n');
 
 function inside(root, candidate) {
   const relative = path.relative(root, candidate);
   return relative === '' || (!relative.startsWith(`..${path.sep}`) && relative !== '..' && !path.isAbsolute(relative));
 }
 
-function loadRepositoryList(file, rootDirectory) {
+function loadRepositoryList(file, rootDirectory, t = englishT) {
   const root = path.resolve(rootDirectory);
   const data = JSON.parse(fs.readFileSync(file, 'utf8'));
-  if (!data || !Array.isArray(data.repos)) throw new Error('Repository list must contain a repos array');
+  if (!data || !Array.isArray(data.repos)) throw new Error(t('Repository list must contain a repos array'));
   const targets = [];
   const seen = new Set();
   for (const entry of data.repos) {
-    if (!entry || typeof entry.path !== 'string' || !entry.path.trim()) throw new Error('Repository entry needs a path');
+    if (!entry || typeof entry.path !== 'string' || !entry.path.trim()) throw new Error(t('Repository entry needs a path'));
     const rel = entry.path.replace(/[\\/]/g, path.sep);
-    if (path.isAbsolute(rel) || /^[A-Za-z]:[\\/]/.test(entry.path)) throw new Error(`Repository path is outside root: ${entry.path}`);
+    if (path.isAbsolute(rel) || /^[A-Za-z]:[\\/]/.test(entry.path)) throw new Error(t('Repository path is outside root: {0}', entry.path));
     const absolute = path.resolve(root, rel);
-    if (!inside(root, absolute)) throw new Error(`Repository path is outside root: ${entry.path}`);
+    if (!inside(root, absolute)) throw new Error(t('Repository path is outside root: {0}', entry.path));
     const key = process.platform === 'win32' ? absolute.toLowerCase() : absolute;
-    if (seen.has(key)) throw new Error(`Duplicate repository path: ${entry.path}`);
+    if (seen.has(key)) throw new Error(t('Duplicate repository path: {0}', entry.path));
     seen.add(key);
     targets.push({ path: absolute, label: entry.path, group: entry.group || '', expectedRemote: entry.remote || '' });
   }
   const warnings = [];
   if (Number.isInteger(data.expected_repo_count) && data.expected_repo_count !== targets.length) {
-    warnings.push(`List has ${targets.length} repositories; expected ${data.expected_repo_count}.`);
+    warnings.push(t('List has {0} repositories; expected {1}.', targets.length, data.expected_repo_count));
   }
   return { targets, warnings };
 }

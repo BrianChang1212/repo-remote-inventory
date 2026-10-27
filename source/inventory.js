@@ -1,4 +1,5 @@
 const { inspectRepository } = require('./git-state');
+const { englishT } = require('./l10n');
 
 const FAILURE_STATUSES = new Set(['REMOTE_UNREACHABLE', 'LOCAL_ERROR', 'MISSING_PATH', 'NOT_A_REPO']);
 
@@ -22,7 +23,8 @@ async function scanTargets(targets, options = {}) {
   const previous = new Map((options.previous || []).map(row => [row.path, row]));
   const inspect = options.inspect || inspectRepository;
   const selected = options.onlyPath ? targets.filter(target => target.path === options.onlyPath) : targets;
-  if (options.onlyPath && selected.length === 0) throw new Error('Selected repository is no longer in the scan list');
+  const t = options.t || englishT;
+  if (options.onlyPath && selected.length === 0) throw new Error(t('Selected repository is no longer in the scan list'));
   const results = new Map();
   let next = 0;
   let finished = 0;

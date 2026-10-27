@@ -1,3 +1,5 @@
+const { englishT } = require('./l10n');
+
 function priority(row) {
   if (row.stale) return 0;
   if (row.worktreeWarning) return 0;
@@ -38,11 +40,13 @@ function rowDetails(row) {
   return details;
 }
 
-function summary(rows) {
+function summary(rows, t = englishT) {
   const attention = rows.filter(row => row.stale || row.worktreeWarning || row.status !== 'IN_SYNC').length;
   const dirty = rows.filter(row => row.dirty > 0).length;
   const unknown = rows.filter(row => row.worktreeWarning).length;
-  return `${rows.length} repositories · ${attention} needs attention · ${dirty} dirty${unknown ? ` · ${unknown} dirty unknown` : ''}`;
+  return unknown
+    ? t('{0} repositories · {1} needs attention · {2} dirty · {3} dirty unknown', rows.length, attention, dirty, unknown)
+    : t('{0} repositories · {1} needs attention · {2} dirty', rows.length, attention, dirty);
 }
 
 module.exports = { sortedRows, rowDescription, rowDetails, summary };

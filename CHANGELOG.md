@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0
+
+- Follow the VS Code theme: sidebar and dashboard use theme colors with separate dark, light, and high contrast accents; glow and grid appear only in dark themes.
+- Follow the VS Code display language: commands, settings, notifications, and webview text show Traditional Chinese for `zh-tw` and English otherwise. Git output stays untranslated.
+- Show times as `MM-DD HH:mm` in both languages.
+
 ## 0.2.1
 
 - Restyle the dashboard to match the NVIDIA-inspired sidebar and use expandable repository cards with visible per-repository refresh buttons.

@@ -3,7 +3,7 @@
   "displayName": "Repo Remote Inventory",
   "description": "Inspect local Git repositories and their remote branches from a VS Code sidebar.",
   "icon": "resources/extension-icon.png",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "publisher": "brian-chang",
   "repository": { "type": "git", "url": "https://github.com/BrianChang1212/repo-remote-inventory.git" },
   "license": "MIT",
@@ -12,6 +12,7 @@
   "categories": ["Other"],
   "activationEvents": ["onView:repoRemoteInventory.repositories"],
   "main": "./source/extension.js",
+  "l10n": "./l10n",
   "scripts": {
     "test": "node --test test/*.test.js",
     "package:verify": "node tool/package-verify.js"
@@ -20,21 +21,21 @@
     "@vscode/vsce": "^4.0.0",
     "yauzl": "^3.4.0"
   },
-  "files": ["source/", "resources/", "README.md", "CHANGELOG.md", "LICENSE", "CONTRIBUTING.md", "SECURITY.md"],
-  "capabilities": { "untrustedWorkspaces": { "supported": false, "description": "Scanning repositories runs the local Git executable." } },
+  "files": ["source/", "resources/", "l10n/", "package.nls.json", "package.nls.zh-tw.json", "README.md", "CHANGELOG.md", "LICENSE", "CONTRIBUTING.md", "SECURITY.md"],
+  "capabilities": { "untrustedWorkspaces": { "supported": false, "description": "%capability.untrustedWorkspaces.description%" } },
   "contributes": {
     "commands": [
-      { "command": "repoRemoteInventory.refreshAll", "title": "Repo Remote Inventory: Refresh All", "icon": "$(refresh)" },
-      { "command": "repoRemoteInventory.refreshRepository", "title": "Repo Remote Inventory: Refresh Repository", "icon": "$(refresh)" },
-      { "command": "repoRemoteInventory.chooseRoot", "title": "Repo Remote Inventory: Choose Scan Directory" },
-      { "command": "repoRemoteInventory.chooseList", "title": "Repo Remote Inventory: Choose Repository List" },
-      { "command": "repoRemoteInventory.toggleAutoRefresh", "title": "Repo Remote Inventory: Manual Mode", "icon": "$(circle-slash)" },
-      { "command": "repoRemoteInventory.enableAutoRefresh", "title": "Repo Remote Inventory: Auto Mode", "icon": "$(sync)" },
-      { "command": "repoRemoteInventory.openDashboard", "title": "Repo Remote Inventory: Open Dashboard", "icon": "$(graph)" },
-      { "command": "repoRemoteInventory.dashboardRefresh", "title": "Refresh Dashboard", "icon": "$(refresh)" }
+      { "command": "repoRemoteInventory.refreshAll", "title": "%command.refreshAll.title%", "icon": "$(refresh)" },
+      { "command": "repoRemoteInventory.refreshRepository", "title": "%command.refreshRepository.title%", "icon": "$(refresh)" },
+      { "command": "repoRemoteInventory.chooseRoot", "title": "%command.chooseRoot.title%" },
+      { "command": "repoRemoteInventory.chooseList", "title": "%command.chooseList.title%" },
+      { "command": "repoRemoteInventory.toggleAutoRefresh", "title": "%command.toggleAutoRefresh.title%", "icon": "$(circle-slash)" },
+      { "command": "repoRemoteInventory.enableAutoRefresh", "title": "%command.enableAutoRefresh.title%", "icon": "$(sync)" },
+      { "command": "repoRemoteInventory.openDashboard", "title": "%command.openDashboard.title%", "icon": "$(graph)" },
+      { "command": "repoRemoteInventory.dashboardRefresh", "title": "%command.dashboardRefresh.title%", "icon": "$(refresh)" }
     ],
-    "viewsContainers": { "activitybar": [{ "id": "repoRemoteInventory", "title": "Repo Inventory", "icon": "resources/inventory.svg" }] },
-    "views": { "repoRemoteInventory": [{ "id": "repoRemoteInventory.repositories", "name": "Repositories", "type": "webview" }] },
+    "viewsContainers": { "activitybar": [{ "id": "repoRemoteInventory", "title": "%viewsContainer.repoRemoteInventory.title%", "icon": "resources/inventory.svg" }] },
+    "views": { "repoRemoteInventory": [{ "id": "repoRemoteInventory.repositories", "name": "%view.repositories.name%", "type": "webview" }] },
     "menus": {
       "view/title": [
         { "command": "repoRemoteInventory.refreshAll", "when": "view == repoRemoteInventory.repositories", "group": "navigation@1" },
@@ -45,14 +46,14 @@
       "webview/title": [{ "command": "repoRemoteInventory.dashboardRefresh", "when": "webviewId == repoRemoteInventory.dashboard", "group": "navigation" }]
     },
     "configuration": {
-      "title": "Repo Remote Inventory",
+      "title": "%config.title%",
       "properties": {
-        "repoRemoteInventory.autoRefreshOnOpen": { "type": "boolean", "scope": "application", "default": true, "description": "Refresh online when the sidebar or dashboard opens." },
-        "repoRemoteInventory.listFile": { "type": "string", "default": "", "description": "Path to a repo_paths.json-compatible list. Empty uses recursive discovery." },
-        "repoRemoteInventory.rootPath": { "type": "string", "default": "", "description": "Root directory for relative list paths or recursive discovery. Empty uses the open workspace folder." },
-        "repoRemoteInventory.excludePaths": { "type": "array", "items": { "type": "string" }, "default": ["node_modules", ".venv"], "description": "Directory names or root-relative paths to exclude from discovery." },
-        "repoRemoteInventory.maxParallel": { "type": "integer", "default": 8, "minimum": 1, "maximum": 32, "description": "Maximum simultaneous Git remote queries." },
-        "repoRemoteInventory.timeoutSeconds": { "type": "integer", "default": 20, "minimum": 1, "maximum": 120, "description": "Timeout for each remote query." }
+        "repoRemoteInventory.autoRefreshOnOpen": { "type": "boolean", "scope": "application", "default": true, "description": "%config.autoRefreshOnOpen.description%" },
+        "repoRemoteInventory.listFile": { "type": "string", "default": "", "description": "%config.listFile.description%" },
+        "repoRemoteInventory.rootPath": { "type": "string", "default": "", "description": "%config.rootPath.description%" },
+        "repoRemoteInventory.excludePaths": { "type": "array", "items": { "type": "string" }, "default": ["node_modules", ".venv"], "description": "%config.excludePaths.description%" },
+        "repoRemoteInventory.maxParallel": { "type": "integer", "default": 8, "minimum": 1, "maximum": 32, "description": "%config.maxParallel.description%" },
+        "repoRemoteInventory.timeoutSeconds": { "type": "integer", "default": 20, "minimum": 1, "maximum": 120, "description": "%config.timeoutSeconds.description%" }
       }
     }
   }

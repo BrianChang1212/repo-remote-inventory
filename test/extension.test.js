@@ -4,6 +4,51 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { start: realStart, defaultResolveTargets } = require('../source/extension');
+const { format } = require('../source/l10n');
+const zhBundle = require('../l10n/bundle.l10n.zh-tw.json');
+
+test('notifications, sidebar status, panel title, and webview HTML go through vscode.l10n.t', async () => {
+  const calls = [];
+  const errors = [];
+  let panel;
+  const view = { visible: false, onDidChangeVisibility() { return { dispose() {} }; } };
+  const vscode = {
+    l10n: { t(message, ...args) { calls.push(message); return format(zhBundle[message] ?? message, args); } },
+    env: { language: 'zh-tw' },
+    EventEmitter: class { event = () => ({ dispose() {} }); fire() {} dispose() {} },
+    window: {
+      createTreeView: () => view,
+      showErrorMessage: async message => { errors.push(message); },
+      createWebviewPanel: (_id, title) => {
+        panel = { title, webview: { cspSource: 'vscode-webview:', postMessage: async () => {}, onDidReceiveMessage: () => ({ dispose() {} }) }, reveal() {}, onDidDispose() {}, onDidChangeViewState: () => ({ dispose() {} }) };
+        return panel;
+      },
+    },
+    workspace: {
+      workspaceFolders: [{ uri: { scheme: 'file', fsPath: '/workspace' } }],
+      getConfiguration: () => ({ get(key, fallback) { return key === 'autoRefreshOnOpen' ? false : fallback; } }),
+      onDidChangeConfiguration: () => ({ dispose() {} }),
+    },
+    commands: { executeCommand: async () => {}, registerCommand: () => ({ dispose() {} }) },
+    ViewColumn: { Active: -1 },
+  };
+  const extension = start(vscode, { subscriptions: [] }, {
+    resolveTargets: async () => { throw new Error('fatal: not a git repository'); },
+  });
+  assert.match(view.webview.html, /<html lang="zh-Hant">/);
+  assert.match(view.webview.html, new RegExp(zhBundle['Refresh all']));
+  await extension.refreshAll();
+  assert.ok(calls.includes('Repo Remote Inventory: {0}'));
+  assert.deepEqual(errors, [format(zhBundle['Repo Remote Inventory: {0}'], ['fatal: not a git repository'])]);
+  assert.equal(view.message, format(zhBundle['Refresh failed: {0}'], ['fatal: not a git repository']));
+  extension.openDashboard();
+  assert.equal(panel.title, zhBundle['Repository Inventory']);
+  assert.match(panel.webview.html, /<html lang="zh-Hant">/);
+  assert.match(panel.webview.html, new RegExp(zhBundle['Clear filter']));
+
+  const remote = { ...vscode, workspace: { ...vscode.workspace, workspaceFolders: [{ uri: { scheme: 'vscode-remote', fsPath: '/x' } }] } };
+  await assert.rejects(defaultResolveTargets(remote), { message: zhBundle['Remote workspaces are not supported in this release. Choose a local scan directory.'] });
+});
 
 function start(vscode, context, dependencies) {
   const view = vscode.window.createTreeView();

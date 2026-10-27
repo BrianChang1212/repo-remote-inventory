@@ -1,0 +1,20 @@
+{
+  "capability.untrustedWorkspaces.description": "Scanning repositories runs the local Git executable.",
+  "command.refreshAll.title": "Repo Remote Inventory: Refresh All",
+  "command.refreshRepository.title": "Repo Remote Inventory: Refresh Repository",
+  "command.chooseRoot.title": "Repo Remote Inventory: Choose Scan Directory",
+  "command.chooseList.title": "Repo Remote Inventory: Choose Repository List",
+  "command.toggleAutoRefresh.title": "Repo Remote Inventory: Manual Mode",
+  "command.enableAutoRefresh.title": "Repo Remote Inventory: Auto Mode",
+  "command.openDashboard.title": "Repo Remote Inventory: Open Dashboard",
+  "command.dashboardRefresh.title": "Refresh Dashboard",
+  "viewsContainer.repoRemoteInventory.title": "Repo Inventory",
+  "view.repositories.name": "Repositories",
+  "config.title": "Repo Remote Inventory",
+  "config.autoRefreshOnOpen.description": "Refresh online when the sidebar or dashboard opens.",
+  "config.listFile.description": "Path to a repo_paths.json-compatible list. Empty uses recursive discovery.",
+  "config.rootPath.description": "Root directory for relative list paths or recursive discovery. Empty uses the open workspace folder.",
+  "config.excludePaths.description": "Directory names or root-relative paths to exclude from discovery.",
+  "config.maxParallel.description": "Maximum simultaneous Git remote queries.",
+  "config.timeoutSeconds.description": "Timeout for each remote query."
+}

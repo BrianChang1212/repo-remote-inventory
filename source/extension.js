@@ -5,6 +5,7 @@ const { scanTargets } = require('./inventory');
 const { sortedRows, summary } = require('./presentation');
 const { dashboardHtml: buildDashboardHtml } = require('./dashboard');
 const { sidebarHtml: buildSidebarHtml } = require('./sidebar');
+const { translator, formatDateTime } = require('./l10n');
 
 class InventoryProvider {
   constructor(vscode) {
@@ -36,32 +37,35 @@ class InventoryProvider {
 }
 
 async function defaultResolveTargets(vscode) {
+  const t = translator(vscode);
   const config = vscode.workspace.getConfiguration('repoRemoteInventory');
   const configuredRoot = String(config.get('rootPath', '') || '').trim();
   const folder = vscode.workspace.workspaceFolders?.[0];
-  if (!configuredRoot && folder && folder.uri.scheme !== 'file') throw new Error('Remote workspaces are not supported in this release. Choose a local scan directory.');
+  if (!configuredRoot && folder && folder.uri.scheme !== 'file') throw new Error(t('Remote workspaces are not supported in this release. Choose a local scan directory.'));
   const root = configuredRoot
     ? path.isAbsolute(configuredRoot) ? path.resolve(configuredRoot)
       : folder?.uri.scheme === 'file' ? path.resolve(folder.uri.fsPath, configuredRoot) : null
     : folder?.uri.fsPath;
-  if (!root) throw new Error('Open a local folder or choose a scan directory.');
+  if (!root) throw new Error(t('Open a local folder or choose a scan directory.'));
   const configuredList = String(config.get('listFile', '') || '').trim();
   if (configuredList) {
     const list = path.isAbsolute(configuredList) ? configuredList : path.resolve(root, configuredList);
-    return loadRepositoryList(list, root);
+    return loadRepositoryList(list, root, t);
   }
   const excludes = config.get('excludePaths', ['node_modules', '.venv']);
-  if (!Array.isArray(excludes) || excludes.some(value => typeof value !== 'string')) throw new Error('excludePaths must be an array of strings');
+  if (!Array.isArray(excludes) || excludes.some(value => typeof value !== 'string')) throw new Error(t('excludePaths must be an array of strings'));
   const warnings = [];
-  const targets = await discoverRepositories(root, { excludes, onWarning: message => {
+  const targets = await discoverRepositories(root, { excludes, t, onWarning: message => {
     if (warnings.length < 20) warnings.push(message);
   } });
   return { targets, warnings };
 }
 
 function start(vscode, context, dependencies = {}) {
+  const t = translator(vscode);
+  const webviewOptions = { t, language: vscode.env?.language };
   const provider = new InventoryProvider(vscode);
-  const sidebarState = { visible: false, message: 'Open this view to check repository status.' };
+  const sidebarState = { visible: false, message: t('Open this view to check repository status.') };
   let sidebar;
   let sidebarReady = false;
   context.subscriptions.push(provider.changes);
@@ -132,10 +136,10 @@ function start(vscode, context, dependencies = {}) {
         const lastSuccess = provider.rows.reduce((latest, row) => {
           const timestamp = row.lastSuccessAt || row.checkedAt || '';
           return timestamp > latest ? timestamp : latest;
-        }, '') || 'unknown';
-        setSidebarMessage(`Cached results from ${lastSuccess}; stale until refreshed.`);
+        }, '');
+        setSidebarMessage(t('Cached results from {0}; stale until refreshed.', lastSuccess ? formatDateTime(lastSuccess) : t('unknown')));
       } else {
-        setSidebarMessage('No saved results for this scan scope. Refresh to check repositories.');
+        setSidebarMessage(t('No saved results for this scan scope. Refresh to check repositories.'));
       }
       renderDashboard();
       renderSidebar();
@@ -152,7 +156,7 @@ function start(vscode, context, dependencies = {}) {
     followup.clear();
     pendingAll = false;
     provider.setRows([]);
-    setSidebarMessage('Loading cached results for the selected scan scope...');
+    setSidebarMessage(t('Loading cached results for the selected scan scope...'));
     const generation = scopeGeneration;
     restorePromise = restoreScope(activeScopeKey, generation).then(async () => {
       if (generation !== scopeGeneration || !shouldAutoRefresh) return;
@@ -162,7 +166,7 @@ function start(vscode, context, dependencies = {}) {
     return restorePromise;
   }
   let restorePromise = restoreScope(activeScopeKey);
-  setSidebarMessage('Open this view to check repository status.');
+  setSidebarMessage(t('Open this view to check repository status.'));
 
   function refresh(onlyPath, queueAll = false) {
     if (running) {
@@ -182,7 +186,7 @@ function start(vscode, context, dependencies = {}) {
       try {
         await restorePromise;
         if (!onlyPath || targets.length === 0) {
-          setSidebarMessage('Finding repositories...');
+          setSidebarMessage(t('Finding repositories...'));
           const resolved = await (dependencies.resolveTargets || (() => defaultResolveTargets(vscode)))();
           if (requestGeneration !== scopeGeneration) return;
           targets = resolved.targets;
@@ -193,7 +197,7 @@ function start(vscode, context, dependencies = {}) {
             ? { ...old.get(target.path), stale: true }
             : { ...target, status: 'PENDING', stale: true }));
           if (!targets.length) {
-            setSidebarMessage('No Git repositories found. Choose a scan directory or repository list.');
+            setSidebarMessage(t('No Git repositories found. Choose a scan directory or repository list.'));
             return;
           }
           if (warnings.length) setSidebarMessage(warnings.join(' '));
@@ -204,11 +208,12 @@ function start(vscode, context, dependencies = {}) {
           previous: provider.rows,
           onlyPath,
           priority,
+          t,
           maxParallel: config.get('maxParallel', 8),
           timeoutMs: config.get('timeoutSeconds', 20) * 1000,
           onProgress({ finished, total, row }) {
             if (requestGeneration === scopeGeneration) {
-              sidebarState.message = `Checking remotes ${finished}/${total}...`;
+              sidebarState.message = t('Checking remotes {0}/{1}...', finished, total);
               completedInRun.add(row.path);
               provider.updateRow(row);
             }
@@ -218,7 +223,10 @@ function start(vscode, context, dependencies = {}) {
         if (requestGeneration === scopeGeneration) {
           provider.setRows(result);
           flushRender();
-          setSidebarMessage(`${summary(result)} · checked ${new Date().toLocaleString()}${warnings.length ? ` · ${warnings.join(' ')}` : ''}`);
+          const checked = formatDateTime(new Date());
+          setSidebarMessage(warnings.length
+            ? t('{0} · checked {1} · {2}', summary(result, t), checked, warnings.join(' '))
+            : t('{0} · checked {1}', summary(result, t), checked));
         }
       } catch (error) {
         const message = error?.message || String(error);
@@ -226,9 +234,9 @@ function start(vscode, context, dependencies = {}) {
           provider.markStale(message);
           if (requestScope) await state.update(requestScope, provider.rows);
           flushRender();
-          setSidebarMessage(`Refresh failed: ${message}`);
+          setSidebarMessage(t('Refresh failed: {0}', message));
         }
-        if (requestGeneration === scopeGeneration) await vscode.window.showErrorMessage(`Repo Remote Inventory: ${message}`);
+        if (requestGeneration === scopeGeneration) await vscode.window.showErrorMessage(t('Repo Remote Inventory: {0}', message));
       }
     })().finally(() => {
       running = null;
@@ -251,9 +259,9 @@ function start(vscode, context, dependencies = {}) {
   context.subscriptions.push(provider.changes.event(scheduleRender), { dispose() { if (renderTimer) clearTimeout(renderTimer); } });
   function openDashboard() {
     if (!dashboard) {
-      dashboard = vscode.window.createWebviewPanel('repoRemoteInventory.dashboard', 'Repository Inventory', vscode.ViewColumn.Active, { enableScripts: true, retainContextWhenHidden: true });
+      dashboard = vscode.window.createWebviewPanel('repoRemoteInventory.dashboard', t('Repository Inventory'), vscode.ViewColumn.Active, { enableScripts: true, retainContextWhenHidden: true });
       dashboardReady = false;
-      dashboard.webview.html = buildDashboardHtml(dashboard.webview, autoMode);
+      dashboard.webview.html = buildDashboardHtml(dashboard.webview, autoMode, webviewOptions);
       dashboard.onDidDispose(() => { dashboard = undefined; dashboardReady = false; });
       context.subscriptions.push(dashboard.onDidChangeViewState(({ webviewPanel }) => {
         if (webviewPanel.visible && autoMode) void refresh();
@@ -327,7 +335,7 @@ function start(vscode, context, dependencies = {}) {
       sidebarReady = false;
       sidebarState.visible = view.visible;
       view.webview.options = { enableScripts: true };
-      view.webview.html = buildSidebarHtml(view.webview, autoMode);
+      view.webview.html = buildSidebarHtml(view.webview, autoMode, webviewOptions);
       context.subscriptions.push(view.onDidChangeVisibility(() => {
         sidebarState.visible = view.visible;
         if (view.visible && autoMode) void refresh();

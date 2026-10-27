@@ -1,5 +1,6 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const { englishT } = require('./l10n');
 
 function shouldExclude(relative, excludes) {
   const normalized = relative.split(path.sep).join('/');
@@ -14,9 +15,10 @@ function shouldExclude(relative, excludes) {
 }
 
 async function discoverRepositories(rootDirectory, options = {}) {
+  const t = options.t || englishT;
   const root = path.resolve(rootDirectory);
   const rootStat = await fs.lstat(root);
-  if (!rootStat.isDirectory() || rootStat.isSymbolicLink()) throw new Error(`Scan root must be a real directory: ${root}`);
+  if (!rootStat.isDirectory() || rootStat.isSymbolicLink()) throw new Error(t('Scan root must be a real directory: {0}', root));
   const excludes = options.excludes || [];
   const maxDirectories = options.maxDirectories || 100000;
   const pending = [root];
@@ -24,14 +26,14 @@ async function discoverRepositories(rootDirectory, options = {}) {
   const readDirectory = options.readDirectory || fs.readdir;
   let visited = 0;
   while (pending.length) {
-    if (options.signal?.aborted) throw new Error('Repository discovery cancelled');
+    if (options.signal?.aborted) throw new Error(t('Repository discovery cancelled'));
     const directory = pending.pop();
-    if (++visited > maxDirectories) throw new Error(`Discovery exceeded ${maxDirectories} directories`);
+    if (++visited > maxDirectories) throw new Error(t('Discovery exceeded {0} directories', maxDirectories));
     let entries;
     try { entries = await readDirectory(directory, { withFileTypes: true }); }
     catch (error) {
-      if (directory === root) throw new Error(`Cannot inspect ${directory}: ${error.message}`);
-      options.onWarning?.(`Cannot inspect ${directory}: ${error.message}`);
+      if (directory === root) throw new Error(t('Cannot inspect {0}: {1}', directory, error.message));
+      options.onWarning?.(t('Cannot inspect {0}: {1}', directory, error.message));
       continue;
     }
     if (entries.some(entry => entry.name === '.git' && !entry.isSymbolicLink() && (entry.isFile() || entry.isDirectory()))) {

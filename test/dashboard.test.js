@@ -2,6 +2,59 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const { dashboardHtml } = require('../source/dashboard');
+const { format } = require('../source/l10n');
+const bundle = require('../l10n/bundle.l10n.zh-tw.json');
+const { assertGuideCss } = require('./style-assertions');
+
+const zhT = (message, ...args) => format(bundle[message] ?? message, args);
+const CJK = /[\u3400-\u9fff]/;
+
+function runDashboard(html) {
+  const script = html.match(/<script nonce="[^"]+">([\s\S]*)<\/script>/)[1];
+  const elements = new Map(['#chart', '#rows', '#meta', '#signals', '#summary', '#mode', '#refresh', '#clear'].map(id => [id, {}]));
+  let receive;
+  vm.runInNewContext(script, {
+    document: { querySelector: id => elements.get(id), addEventListener() {}, querySelectorAll: () => [] },
+    window: { addEventListener: (_name, callback) => { receive = callback; } },
+    acquireVsCodeApi: () => ({ postMessage() {} }),
+  });
+  receive({ data: { type: 'rows', checkedAt: '2026-10-21T03:00:00Z', rows: [
+    { label: 'alpha', path: '/a', status: 'IN_SYNC', stale: true, dirty: 2 },
+    { label: 'beta', path: '/b', status: 'AHEAD', dirty: 0 },
+  ] } });
+  return elements;
+}
+
+test('dashboard renders English text with lang="en" and no Chinese by default', () => {
+  const html = dashboardHtml({ cspSource: 'vscode-webview:' }, true);
+  assert.match(html, /<html lang="en">/);
+  assert.match(html, /Repository inventory/);
+  assert.doesNotMatch(html, CJK);
+  const elements = runDashboard(html);
+  assert.match(elements.get('#meta').textContent, /^2 repositories · Last check: \d{2}-\d{2} \d{2}:\d{2} · cached snapshot; stale until refreshed$/);
+  assert.equal(elements.get('#mode').textContent, 'Mode: Auto');
+  assert.match(elements.get('#summary').innerHTML, /Needs Attention/);
+  assert.match(elements.get('#rows').innerHTML, /Compare target/);
+  assert.doesNotMatch(Object.values(Object.fromEntries(elements)).map(item => (item.innerHTML || '') + (item.textContent || '')).join(''), CJK);
+});
+
+test('dashboard renders zh-tw text from the host string table with lang="zh-Hant"', () => {
+  const html = dashboardHtml({ cspSource: 'vscode-webview:' }, true, { t: zhT, language: 'zh-tw' });
+  assert.match(html, /<html lang="zh-Hant">/);
+  assert.match(html, new RegExp(bundle['Repository inventory']));
+  assert.match(html, new RegExp(`>${bundle['Clear filter']}<`));
+  assert.doesNotMatch(html, />Clear filter<|>Refresh<|Repository inventory/);
+  const elements = runDashboard(html);
+  assert.equal(elements.get('#mode').textContent, bundle['Mode: Auto']);
+  assert.match(elements.get('#summary').innerHTML, new RegExp(bundle['Needs Attention']));
+  assert.match(elements.get('#signals').textContent, new RegExp(format(bundle['Stale: {0} · Dirty: {1}'], [1, 1])));
+  assert.match(elements.get('#rows').innerHTML, new RegExp(bundle['Compare target']));
+  assert.doesNotMatch(elements.get('#rows').innerHTML + elements.get('#summary').innerHTML, /Compare target|Needs Attention|In Sync/);
+});
+
+test('dashboard CSS uses the guide variables with light and high contrast overrides', () => {
+  assertGuideCss(dashboardHtml({ cspSource: 'vscode-webview:' }, true), 'editor');
+});
 
 test('dashboard provides an auto toggle, exact status filters, separate stale and dirty signals, and snapshot times', () => {
   const html = dashboardHtml({ cspSource: 'vscode-webview:' }, false);
@@ -12,12 +65,12 @@ test('dashboard provides an auto toggle, exact status filters, separate stale an
   assert.match(html, /Stale/);
   assert.match(html, /id="refresh">Refresh/);
   assert.match(html, /data-status=/);
-  assert.match(html, /STALE: /);
+  assert.match(html, /Stale: /);
   assert.match(html, /Dirty: /);
   assert.match(html, /Last check:/);
   assert.match(html, /clear/);
   assert.match(html, /toggleAuto/);
-  assert.match(html, /--accent:#89e829/);
+  assert.match(html, /--accent: #89e829/);
   assert.match(html, /<details/);
   assert.match(html, /refreshRepository/);
 });
@@ -46,15 +99,16 @@ test('dashboard message renders rows and chart filters narrow rows until cleared
   ] } });
   assert.match(elements.get('#chart').innerHTML, /IN_SYNC \(1\)/);
   assert.match(elements.get('#chart').innerHTML, /AHEAD \(1\)/);
-  assert.doesNotMatch(elements.get('#chart').innerHTML, /STALE/);
-  assert.match(elements.get('#signals').textContent, /STALE: 1 · Dirty: 1/);
+  assert.doesNotMatch(elements.get('#chart').innerHTML, /Stale/);
+  assert.match(elements.get('#signals').textContent, /Stale: 1 · Dirty: 1/);
   assert.match(elements.get('#summary').innerHTML, /All[\s\S]*3/);
   assert.match(elements.get('#summary').innerHTML, /In Sync[\s\S]*1/);
   assert.match(elements.get('#summary').innerHTML, /Needs Attention[\s\S]*2/);
   assert.match(elements.get('#summary').innerHTML, /Stale[\s\S]*1/);
   assert.match(elements.get('#meta').textContent, /Last check: /);
   assert.match(elements.get('#rows').innerHTML, /same/);
-  assert.match(elements.get('#rows').innerHTML, /STALE/);
+  assert.match(elements.get('#rows').innerHTML, /Stale/);
+  assert.doesNotMatch(elements.get('#rows').innerHTML + elements.get('#signals').textContent, /STALE/);
   assert.match(elements.get('#rows').innerHTML, /data-action="refreshRepository"/);
   statusButtons.find(button => button.dataset.status === 'AHEAD').onclick();
   assert.match(elements.get('#rows').innerHTML, /other/);

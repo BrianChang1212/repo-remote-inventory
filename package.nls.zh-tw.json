@@ -1,0 +1,20 @@
+{
+  "capability.untrustedWorkspaces.description": "掃描儲存庫會執行本機的 Git 程式。",
+  "command.refreshAll.title": "Repo Remote Inventory：全部重新整理",
+  "command.refreshRepository.title": "Repo Remote Inventory：重新整理儲存庫",
+  "command.chooseRoot.title": "Repo Remote Inventory：選擇掃描目錄",
+  "command.chooseList.title": "Repo Remote Inventory：選擇儲存庫清單",
+  "command.toggleAutoRefresh.title": "Repo Remote Inventory：手動模式",
+  "command.enableAutoRefresh.title": "Repo Remote Inventory：自動模式",
+  "command.openDashboard.title": "Repo Remote Inventory：開啟儀表板",
+  "command.dashboardRefresh.title": "重新整理儀表板",
+  "viewsContainer.repoRemoteInventory.title": "儲存庫盤點",
+  "view.repositories.name": "儲存庫",
+  "config.title": "Repo Remote Inventory",
+  "config.autoRefreshOnOpen.description": "開啟側欄或儀表板時連線重新整理。",
+  "config.listFile.description": "相容 repo_paths.json 的清單路徑。留空則遞迴尋找。",
+  "config.rootPath.description": "清單相對路徑或遞迴尋找的根目錄。留空則使用目前開啟的工作區資料夾。",
+  "config.excludePaths.description": "尋找時排除的目錄名稱或相對於根目錄的路徑。",
+  "config.maxParallel.description": "同時進行的 Git remote 查詢上限。",
+  "config.timeoutSeconds.description": "每次 remote 查詢的逾時秒數。"
+}
