@@ -1,6 +1,7 @@
 const crypto = require('node:crypto');
 const { englishT, htmlLang, format, formatDateTime, scriptJson } = require('./l10n');
 const { guideCss } = require('./style');
+const { noteStrings, translateNote } = require('./refresh-note');
 
 // Strings drawn by the webview script; translated on the extension host (guide §2.3).
 function sidebarStrings(t) {
@@ -16,6 +17,7 @@ function sidebarStrings(t) {
     localSha: t('Local SHA'), remoteSha: t('Remote SHA'), lastCommit: t('Last commit'),
     lastCheck: t('Last check'), path: t('Path'), refreshRepository: t('Refresh repository'),
     noRepositories: t('No repositories to display.'),
+    notes: noteStrings(t),
   };
 }
 
@@ -24,6 +26,7 @@ const vscode = acquireVsCodeApi();
 const S = STRINGS;
 ${format.toString()}
 ${formatDateTime.toString()}
+${translateNote.toString()}
 let rows = [];
 let autoMode = AUTO_MODE;
 let message = '';
@@ -59,7 +62,7 @@ function draw() {
       '<dt>' + esc(S.localSha) + '</dt><dd class="sha">' + value(row.localSha) + '</dd><dt>' + esc(S.remoteSha) + '</dt><dd class="sha">' + value(row.remoteSha) + '</dd>' +
       '<dt>' + esc(S.lastCommit) + '</dt><dd>' + value(row.lastCommit) + '</dd><dt>' + esc(S.lastCheck) + '</dt><dd>' + value(timestamp) + '</dd>' +
       '<dt>' + esc(S.path) + '</dt><dd class="path">' + esc(path) + '</dd></dl>' +
-      (row.refreshError ? '<p class="note">' + esc(row.refreshError) + '</p>' : '') +
+      (row.refreshError ? '<p class="note">' + esc(translateNote(row.refreshError, S.notes)) + '</p>' : '') +
       '<button class="row-action" data-action="refreshRepository" data-path="' + esc(path) + '">' + esc(S.refreshRepository) + '</button></div></details>';
   }).join('') || '<div class="empty">' + esc(S.noRepositories) + '</div>';
 }

@@ -1,6 +1,7 @@
 const crypto = require('node:crypto');
 const { englishT, htmlLang, format, formatDateTime, scriptJson } = require('./l10n');
 const { guideCss } = require('./style');
+const { noteStrings, translateNote } = require('./refresh-note');
 
 // Strings drawn by the webview script; translated on the extension host (guide §2.3).
 function dashboardStrings(t) {
@@ -13,6 +14,7 @@ function dashboardStrings(t) {
     meta: t('{0} repositories · Last check: {1}'),
     metaStale: t('{0} repositories · Last check: {1} · cached snapshot; stale until refreshed'),
     unknown: t('unknown'), modeAuto: t('Mode: Auto'), modeManual: t('Mode: Manual'),
+    notes: noteStrings(t),
   };
 }
 
@@ -21,6 +23,7 @@ const vscode = acquireVsCodeApi();
 const S = STRINGS;
 ${format.toString()}
 ${formatDateTime.toString()}
+${translateNote.toString()}
 let rows = [];
 let filter = '';
 let auto = AUTO_MODE;
@@ -53,7 +56,8 @@ function draw() {
       '<dt>' + esc(S.aheadBehind) + '</dt><dd>' + esc(row.ahead || 0) + ' / ' + esc(row.behind || 0) + '</dd>' +
       '<dt>' + esc(S.localRemoteSha) + '</dt><dd class="sha">' + esc(row.localSha || '—') + ' / ' + esc(row.remoteSha || '—') + '</dd>' +
       '<dt>' + esc(S.lastCommitCheck) + '</dt><dd>' + esc(row.lastCommit || '—') + ' / ' + esc(formatDateTime(row.lastSuccessAt || row.checkedAt) || '—') + '</dd>' +
-      '<dt>' + esc(S.path) + '</dt><dd>' + esc(row.path) + '</dd></dl></div></details>' +
+      '<dt>' + esc(S.path) + '</dt><dd>' + esc(row.path) + '</dd></dl>' +
+      (row.refreshError ? '<p class="note">' + esc(translateNote(row.refreshError, S.notes)) + '</p>' : '') + '</div></details>' +
       '<button class="repo-refresh" data-action="refreshRepository" data-path="' + esc(row.path) + '" aria-label="' + esc(format(S.refreshNamed, [row.label || row.path])) + '">↻</button></article>').join('');
 
   document.querySelector('#signals').textContent = format(S.signals, [
@@ -127,6 +131,7 @@ dl { display: grid; grid-template-columns: 145px minmax(0, 1fr); gap: 6px 12px; 
 dt { color: var(--muted); } dd { margin: 0; overflow-wrap: anywhere; }
 .sha { font-family: var(--mono); }
 .dirty { color: var(--accent); }
+.note { color: var(--warn); overflow-wrap: anywhere; }
 @media (max-width: 800px) { body { padding: 12px; } .bar button { min-width: 120px; } .repo-status { min-width: 0; } .repo-signal { display: none; } dl { grid-template-columns: 1fr; } dt { margin-top: 6px; } }
 `;
 

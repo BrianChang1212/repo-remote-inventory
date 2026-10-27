@@ -3,7 +3,7 @@
   "displayName": "Repo Remote Inventory",
   "description": "Inspect local Git repositories and their remote branches from a VS Code sidebar.",
   "icon": "resources/extension-icon.png",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "publisher": "brian-chang",
   "repository": { "type": "git", "url": "https://github.com/BrianChang1212/repo-remote-inventory.git" },
   "license": "MIT",

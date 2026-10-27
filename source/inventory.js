@@ -1,6 +1,9 @@
 const { inspectRepository } = require('./git-state');
-const { englishT } = require('./l10n');
+const { englishT, format } = require('./l10n');
 
+// Stored in English; refresh-note.js translates the composed text at render time (guide §2.3).
+const REFRESH_FAILED = 'Refresh failed';
+const REFRESH_ERROR_FORMAT = '{0}: {1}';
 const FAILURE_STATUSES = new Set(['REMOTE_UNREACHABLE', 'LOCAL_ERROR', 'MISSING_PATH', 'NOT_A_REPO']);
 
 function mergeResult(previous, fresh) {
@@ -15,7 +18,7 @@ function mergeResult(previous, fresh) {
     stale: true,
     lastSuccessAt: previous.lastSuccessAt || previous.checkedAt,
     lastAttemptAt: fresh.checkedAt,
-    refreshError: `${fresh.status}: ${fresh.note || 'Refresh failed'}`,
+    refreshError: format(REFRESH_ERROR_FORMAT, [fresh.status, fresh.note || REFRESH_FAILED]),
   };
 }
 
@@ -57,4 +60,4 @@ async function scanTargets(targets, options = {}) {
   });
 }
 
-module.exports = { mergeResult, scanTargets, FAILURE_STATUSES };
+module.exports = { mergeResult, scanTargets, FAILURE_STATUSES, REFRESH_FAILED, REFRESH_ERROR_FORMAT };

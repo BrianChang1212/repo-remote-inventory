@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.1
+
+- Show refresh notes written by this extension (for example `Remote query timed out`) in Traditional Chinese for `zh-tw` in the sidebar and dashboard; the dashboard now shows the refresh note too. Cached data stays English, status codes and Git output stay untranslated.
+
 ## 0.3.0
 
 - Follow the VS Code theme: sidebar and dashboard use theme colors with separate dark, light, and high contrast accents; glow and grid appear only in dark themes.
