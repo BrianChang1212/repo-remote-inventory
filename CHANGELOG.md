@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Unify the dashboard and sidebar with shared inventory components, compact divided lists, and matching summary styling. Keep working-tree signals visible in narrow dashboard layouts.
+
 ## 0.3.1
 
 - Show refresh notes written by this extension (for example `Remote query timed out`) in Traditional Chinese for `zh-tw` in the sidebar and dashboard; the dashboard now shows the refresh note too. Cached data stays English, status codes and Git output stay untranslated.
