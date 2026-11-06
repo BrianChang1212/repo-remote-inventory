@@ -7,7 +7,7 @@ const rows = [
   { path: 'D:/Brian/projects/telemetry', label: 'Telemetry Bridge', status: 'BEHIND', dirty: 3, ahead: 0, behind: 2, branch: 'feature/uart', compareTarget: 'origin/feature/uart', localSha: '2b70ac11', remoteSha: '4991f66a', lastCommit: 'Refine UART retry', checkedAt: '2026-10-21T03:00:00Z' },
   { path: 'D:/Brian/projects/release-hub', label: 'Release Hub', status: 'IN_SYNC', stale: true, lastSuccessAt: '2026-10-20T09:00:00Z', branch: 'main', compareTarget: 'origin/main', localSha: '65ce8203', remoteSha: '65ce8203' },
 ];
-const state = JSON.stringify({ type: 'state', rows, autoMode: true, message: '3 repositories · 2 need attention · checked 10/21/2026, 11:00 AM' });
+const state = JSON.stringify({ type: 'state', rows, autoMode: true, message: 'Checked 10-21 11:00' });
 const html = sidebarHtml({ cspSource: 'vscode-webview:' }, true).replace(
   'const vscode = acquireVsCodeApi();',
   `const vscode = { postMessage(message) { if (message.command === 'ready') setTimeout(() => { window.postMessage(${state}, '*'); setTimeout(() => { document.querySelectorAll('details')[1].open = true; }, 50); }, 0); } };`,

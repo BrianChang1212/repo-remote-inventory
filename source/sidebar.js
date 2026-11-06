@@ -18,6 +18,7 @@ function sidebarStrings(t) {
     localSha: t('Local SHA'), remoteSha: t('Remote SHA'), lastCommit: t('Last commit'),
     lastCheck: t('Last check'), path: t('Path'), refreshRepository: t('Refresh repository'),
     noRepositories: t('No repositories to display.'),
+    noMatches: t('No repositories match your search and filter.'),
     notes: noteStrings(t),
   };
 }
@@ -31,6 +32,8 @@ ${translateNote.toString()}
 let rows = [];
 let autoMode = AUTO_MODE;
 let message = '';
+let query = '';
+let selected = 'all';
 const expanded = new Set();
 const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
@@ -41,6 +44,7 @@ function draw() {
   const current = rows.filter(row => !row.stale && row.status && row.status !== 'PENDING');
   const attention = current.filter(row => row.worktreeWarning || row.status !== 'IN_SYNC');
   const unconfirmed = rows.length - current.length;
+  const unconfirmedNote = unconfirmed ? format(S.unconfirmed, [unconfirmed]) : '';
   const allStale = rows.length > 0 && rows.every(row => row.stale);
   document.querySelector('#summary').innerHTML = [
     [S.total, rows.length], [S.current, current.length], [S.attention, current.length ? attention.length : '—'],
@@ -50,9 +54,14 @@ function draw() {
   document.querySelector('#status').textContent = [
     message || (rows.length ? S.lastKnown : S.emptyHint),
     allStale && message ? S.lastKnown : '',
-    unconfirmed ? format(S.unconfirmed, [unconfirmed]) : '',
+    unconfirmedNote && !message.includes(unconfirmedNote) ? unconfirmedNote : '',
   ].filter(Boolean).join(' · ');
-  document.querySelector('#repositories').innerHTML = rows.map(row => {
+  const visible = rows.filter(row => {
+    const matches = (String(row.label || '') + ' ' + String(row.path || '')).toLowerCase().includes(query.toLowerCase());
+    const attention = row.worktreeWarning || (row.status && row.status !== 'IN_SYNC' && row.status !== 'PENDING');
+    return matches && (selected === 'all' || (selected === 'sync' ? row.status === 'IN_SYNC' : attention));
+  });
+  document.querySelector('#repositories').innerHTML = visible.map(row => {
     const path = String(row.path || '');
     const label = row.label && row.label !== '.' ? String(row.label) : path;
     const name = value(label.split(String.fromCharCode(92)).at(-1).split('/').at(-1), S.unnamed);
@@ -72,8 +81,14 @@ function draw() {
       '<dt>' + esc(S.path) + '</dt><dd class="path">' + esc(path) + '</dd></dl>' +
       (row.refreshError ? '<p class="note">' + esc(translateNote(row.refreshError, S.notes)) + '</p>' : '') +
       '<button class="row-action" data-action="refreshRepository" data-path="' + esc(path) + '">' + esc(S.refreshRepository) + '</button></div></details>';
-  }).join('') || '<div class="empty">' + esc(S.noRepositories) + '</div>';
+  }).join('') || '<div class="empty">' + esc(rows.length ? S.noMatches : S.noRepositories) + '</div>';
 }
+
+document.addEventListener('input', event => {
+  if (event.target.id !== 'search') return;
+  query = event.target.value;
+  draw();
+});
 
 window.addEventListener('message', event => {
   if (event.data.type !== 'state') return;
@@ -83,12 +98,21 @@ window.addEventListener('message', event => {
   draw();
 });
 document.addEventListener('toggle', event => {
+  if (event.target.isConnected === false) return;
   const card = event.target.closest('details[data-path]');
   if (!card) return;
   if (card.open) expanded.add(card.dataset.path);
   else expanded.delete(card.dataset.path);
 }, true);
 document.addEventListener('click', event => {
+  const filter = event.target.closest('[data-filter]');
+  if (filter) {
+    document.querySelector('#filter-' + selected).setAttribute('aria-pressed', 'false');
+    selected = filter.dataset.filter;
+    document.querySelector('#filter-' + selected).setAttribute('aria-pressed', 'true');
+    draw();
+    return;
+  }
   const button = event.target.closest('[data-action]');
   if (!button) return;
   vscode.postMessage({ command: button.dataset.action, ...(button.dataset.path ? { path: button.dataset.path } : {}) });
@@ -107,6 +131,11 @@ body { min-height: 100vh; padding: 12px 10px 24px; overflow-wrap: anywhere; }
 #mode::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 8px; border-radius: 50%; background: var(--muted); }
 #mode[aria-pressed="true"]::before { background: var(--accent); box-shadow: var(--glow); }
 .status { margin: 14px 0 17px; }
+.search { width: 100%; min-width: 0; margin: 0 0 9px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); color: var(--text); font: inherit; }
+.filters { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+.filters button { min-width: 0; padding: 4px 8px; font-size: 11px; }
+.filters button[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
+.filter-hint { margin: 0 0 12px; font-size: 10px; color: var(--muted); }
 #repositories { border-top: 1px solid var(--line); }
 .repo { margin: 0; border-bottom: 1px solid var(--line); background: var(--surface); }
 .repo:hover, .repo[open] { background: var(--raised); }
@@ -141,7 +170,9 @@ function sidebarHtml(webview, autoMode, options = {}) {
 <header><p class="eyebrow">${t('REPOSITORY INTELLIGENCE')}</p><h1>${t('Remote inventory')}</h1><p class="lede">${t('Local worktrees and remote branch status')}</p></header>
 <section id="summary" class="metrics" aria-label="${t('Repository summary')}"></section>
 <nav class="controls" aria-label="${t('Inventory actions')}"><button id="mode" data-action="toggleAuto" aria-pressed="false">${t('Auto refresh')}</button><button id="refresh" class="primary" data-action="refresh">${t('Refresh all')}</button><button id="dashboard" data-action="openDashboard">${t('Dashboard ↗')}</button></nav>
-<p id="status" class="status" role="status"></p><section class="repositories" aria-label="${t('Repositories')}"><h2>${t('Repositories')}</h2><div id="repositories"></div></section>
+<p id="status" class="status" role="status"></p><input id="search" class="search" type="search" aria-label="${t('Search repositories')}" placeholder="${t('Search repositories')}">
+<nav class="filters" aria-label="${t('Repository filters')}" aria-describedby="filter-hint"><button id="filter-all" data-filter="all" aria-pressed="true">${t('All')}</button><button id="filter-attention" data-filter="attention" aria-pressed="false">${t('Attention')}</button><button id="filter-sync" data-filter="sync" aria-pressed="false">${t('In sync')}</button></nav>
+<p id="filter-hint" class="filter-hint">${t('Filters use last known status, including cached results; summary counts only confirmed results.')}</p><section class="repositories" aria-label="${t('Repositories')}"><h2>${t('Repositories')}</h2><div id="repositories"></div></section>
 <script nonce="${nonce}">${script}</script></body></html>`;
 }
 

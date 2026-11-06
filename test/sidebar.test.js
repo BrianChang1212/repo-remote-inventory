@@ -6,9 +6,106 @@ const { start } = require('../source/extension');
 const { format } = require('../source/l10n');
 const bundle = require('../l10n/bundle.l10n.zh-tw.json');
 const { assertGuideCss } = require('./style-assertions');
+const { summary } = require('../source/presentation');
 
 const zhT = (message, ...args) => format(bundle[message] ?? message, args);
 const CJK = /[\u3400-\u9fff]/;
+
+function interactiveSidebar(rows, options = {}) {
+  const html = sidebarHtml({ cspSource: 'vscode-webview:' }, false, options);
+  const script = html.match(/<script nonce="[^"]+">([\s\S]*?)<\/script>/)[1];
+  const elements = new Map(['#repositories', '#summary', '#mode', '#status', '#filters', '#search', '#filter-all', '#filter-attention', '#filter-sync'].map(id => [id, { innerHTML: '', textContent: '', value: '', attributes: {}, setAttribute(name, value) { this.attributes[name] = value; } }]));
+  const handlers = {};
+  const posted = [];
+  let receive;
+  vm.runInNewContext(script, {
+    document: { querySelector: id => elements.get(id), addEventListener: (type, handler) => { handlers[type] = handler; } },
+    window: { addEventListener: (_type, handler) => { receive = handler; } },
+    acquireVsCodeApi: () => ({ postMessage: message => posted.push(message) }),
+  });
+  const update = (rows, message) => receive({ data: { type: 'state', rows, message } });
+  update(rows);
+  return {
+    elements, posted, update,
+    search(query) { elements.get('#search').value = query; handlers.input({ target: { id: 'search', value: query } }); },
+    filter(filter) { handlers.click({ target: { closest: selector => selector === '[data-filter]' ? { dataset: { filter } } : null } }); },
+    expand(path) { handlers.toggle({ target: { closest: () => ({ open: true, dataset: { path } }) } }); },
+    refresh(path) { handlers.click({ target: { closest: selector => selector === '[data-action]' ? { dataset: { action: 'refreshRepository', path } } : null } }); },
+  };
+}
+
+test('search matches repository labels and full paths without changing global counts', () => {
+  const ui = interactiveSidebar([{ path: '/group/Alpha', label: 'Service', status: 'IN_SYNC' }, { path: '/other/beta', label: 'Worker', status: 'BEHIND' }]);
+  ui.search('GROUP/alpha');
+  assert.match(ui.elements.get('#repositories').innerHTML, />Service</);
+  assert.doesNotMatch(ui.elements.get('#repositories').innerHTML, />Worker</);
+  assert.match(ui.elements.get('#summary').innerHTML, /TOTAL<\/span><strong>2</);
+  ui.search('wOrKeR');
+  assert.match(ui.elements.get('#repositories').innerHTML, />Worker</);
+  assert.doesNotMatch(ui.elements.get('#repositories').innerHTML, />Service</);
+  ui.search('<img>');
+  assert.match(ui.elements.get('#repositories').innerHTML, /No repositories match/);
+  assert.doesNotMatch(ui.elements.get('#repositories').innerHTML, /<img>/);
+  ui.update([]);
+  assert.match(ui.elements.get('#repositories').innerHTML, /No repositories to display/);
+});
+
+test('last-known filters intersect search, exclude pending and preserve expansion on updates', () => {
+  const rows = [
+    { path: '/one/repo', label: 'repo', status: 'IN_SYNC', stale: true },
+    { path: '/two/repo', label: 'repo', status: 'BEHIND', stale: true },
+    { path: '/pending', status: 'PENDING', stale: true },
+    { path: '/warning', status: 'IN_SYNC', worktreeWarning: 'unknown' },
+  ];
+  const ui = interactiveSidebar(rows);
+  ui.expand('/two/repo');
+  ui.filter('attention');
+  assert.equal(ui.elements.get('#filter-attention').attributes['aria-pressed'], 'true');
+  assert.equal(ui.elements.get('#filter-all').attributes['aria-pressed'], 'false');
+  let output = ui.elements.get('#repositories').innerHTML;
+  assert.match(output, /data-path="\/two\/repo" open/);
+  assert.match(output, /data-path="\/warning"/);
+  assert.doesNotMatch(output, /data-path="\/one\/repo"|data-path="\/pending"/);
+  ui.search('/TWO/');
+  ui.update(rows.map(row => ({ ...row, dirty: 1 })));
+  output = ui.elements.get('#repositories').innerHTML;
+  assert.match(output, /data-path="\/two\/repo" open/);
+  assert.doesNotMatch(output, /data-path="\/warning"/);
+  assert.equal(ui.elements.get('#search').value, '/TWO/');
+  assert.equal(ui.elements.get('#filter-attention').attributes['aria-pressed'], 'true');
+  ui.refresh('/two/repo');
+  assert.equal(ui.posted.at(-1).path, '/two/repo');
+  ui.search('');
+  ui.filter('sync');
+  output = ui.elements.get('#repositories').innerHTML;
+  assert.match(output, /data-path="\/one\/repo"/);
+  assert.doesNotMatch(output, /data-path="\/two\/repo"|data-path="\/pending"/);
+  ui.filter('all');
+  assert.match(ui.elements.get('#repositories').innerHTML, /data-path="\/two\/repo" open/);
+  assert.match(ui.elements.get('#repositories').innerHTML, /data-path="\/pending"/);
+  assert.match(sidebarHtml({ cspSource: 'vscode-webview:' }, false), /Filters use last known status/);
+});
+
+test('search and filters are localized and distinguish unmatched results from an empty inventory', () => {
+  const options = { t: zhT, language: 'zh-tw' };
+  const html = sidebarHtml({ cspSource: 'vscode-webview:' }, false, options);
+  for (const key of ['Search repositories', 'Repository filters', 'Attention', 'In sync', 'Filters use last known status, including cached results; summary counts only confirmed results.']) {
+    assert.ok(bundle[key], key);
+    assert.ok(html.includes(bundle[key]), key);
+  }
+  const ui = interactiveSidebar([{ path: '/repo', status: 'IN_SYNC' }], options);
+  ui.search('missing');
+  assert.ok(ui.elements.get('#repositories').innerHTML.includes(bundle['No repositories match your search and filter.']));
+  ui.update([]);
+  assert.ok(ui.elements.get('#repositories').innerHTML.includes(bundle['No repositories to display.']));
+});
+
+test('refresh completion shows its unconfirmed warning only once', () => {
+  const rows = [{ path: '/repo', status: 'IN_SYNC', stale: true }];
+  const ui = interactiveSidebar(rows);
+  ui.update(rows, summary(rows));
+  assert.equal(ui.elements.get('#status').textContent.match(/1 unconfirmed/g).length, 1);
+});
 
 function runSidebar(html, rows = [
   { path: '/a', label: 'alpha', status: 'IN_SYNC', stale: true, dirty: 2, branch: 'main', checkedAt: '2026-10-21T03:00:00Z' },

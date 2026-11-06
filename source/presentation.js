@@ -41,12 +41,16 @@ function rowDetails(row) {
 }
 
 function summary(rows, t = englishT) {
-  const attention = rows.filter(row => row.stale || row.worktreeWarning || row.status !== 'IN_SYNC').length;
+  const current = rows.filter(row => !row.stale && row.status && row.status !== 'PENDING');
+  const attention = current.length ? current.filter(row => row.worktreeWarning || row.status !== 'IN_SYNC').length : '—';
   const dirty = rows.filter(row => row.dirty > 0).length;
   const unknown = rows.filter(row => row.worktreeWarning).length;
-  return unknown
+  const result = unknown
     ? t('{0} repositories · {1} needs attention · {2} dirty · {3} dirty unknown', rows.length, attention, dirty, unknown)
     : t('{0} repositories · {1} needs attention · {2} dirty', rows.length, attention, dirty);
+  return rows.length > current.length
+    ? result + ' · ' + t('{0} unconfirmed; current attention count is incomplete.', rows.length - current.length)
+    : result;
 }
 
 module.exports = { sortedRows, rowDescription, rowDetails, summary };

@@ -28,3 +28,9 @@ test('unknown working tree status is not presented as clean', () => {
   assert.match(rowDetails(row).join('\n'), /incomplete/);
   assert.match(summary([row]), /1 dirty unknown/);
 });
+
+test('refresh summaries do not describe stale or pending results as confirmed attention', () => {
+  assert.equal(summary([{ status: 'BEHIND', stale: true }, { status: 'PENDING' }, { status: 'IN_SYNC' }]),
+    '3 repositories · 0 needs attention · 0 dirty · 2 unconfirmed; current attention count is incomplete.');
+  assert.match(summary([{ status: 'BEHIND', stale: true }]), /— needs attention/);
+});
