@@ -56,8 +56,12 @@ function draw() {
     allStale && message ? S.lastKnown : '',
     unconfirmedNote && !message.includes(unconfirmedNote) ? unconfirmedNote : '',
   ].filter(Boolean).join(' · ');
+  const needle = query.trim().toLowerCase().replaceAll(String.fromCharCode(92), '/');
   const visible = rows.filter(row => {
-    const matches = (String(row.label || '') + ' ' + String(row.path || '')).toLowerCase().includes(query.toLowerCase());
+    const path = String(row.path || '').replaceAll(String.fromCharCode(92), '/');
+    const label = row.label && row.label !== '.' ? String(row.label) : path;
+    const name = label.replaceAll(String.fromCharCode(92), '/').split('/').at(-1);
+    const matches = (needle.includes('/') ? path : name).toLowerCase().includes(needle);
     const attention = row.worktreeWarning || (row.status && row.status !== 'IN_SYNC' && row.status !== 'PENDING');
     return matches && (selected === 'all' || (selected === 'sync' ? row.status === 'IN_SYNC' : attention));
   });
@@ -170,7 +174,7 @@ function sidebarHtml(webview, autoMode, options = {}) {
 <header><p class="eyebrow">${t('REPOSITORY INTELLIGENCE')}</p><h1>${t('Remote inventory')}</h1><p class="lede">${t('Local worktrees and remote branch status')}</p></header>
 <section id="summary" class="metrics" aria-label="${t('Repository summary')}"></section>
 <nav class="controls" aria-label="${t('Inventory actions')}"><button id="mode" data-action="toggleAuto" aria-pressed="false">${t('Auto refresh')}</button><button id="refresh" class="primary" data-action="refresh">${t('Refresh all')}</button><button id="dashboard" data-action="openDashboard">${t('Dashboard ↗')}</button></nav>
-<p id="status" class="status" role="status"></p><input id="search" class="search" type="search" aria-label="${t('Search repositories')}" placeholder="${t('Search repositories')}">
+<p id="status" class="status" role="status"></p><input id="search" class="search" type="search" aria-label="${t('Search repositories')}" placeholder="${t('Name, or path with / or \\')}">
 <nav class="filters" aria-label="${t('Repository filters')}" aria-describedby="filter-hint"><button id="filter-all" data-filter="all" aria-pressed="true">${t('All')}</button><button id="filter-attention" data-filter="attention" aria-pressed="false">${t('Attention')}</button><button id="filter-sync" data-filter="sync" aria-pressed="false">${t('In sync')}</button></nav>
 <p id="filter-hint" class="filter-hint">${t('Filters use last known status, including cached results; summary counts only confirmed results.')}</p><section class="repositories" aria-label="${t('Repositories')}"><h2>${t('Repositories')}</h2><div id="repositories"></div></section>
 <script nonce="${nonce}">${script}</script></body></html>`;

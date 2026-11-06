@@ -50,6 +50,27 @@ test('search matches repository labels and full paths without changing global co
   assert.match(ui.elements.get('#repositories').innerHTML, /No repositories to display/);
 });
 
+test('plain Brian search finds the repository name without matching every shared root path', () => {
+  const ui = interactiveSidebar([
+    { path: 'D:/Brian', label: 'Brian', status: 'IN_SYNC' },
+    { path: 'D:/Brian/projects/alpha', label: 'Alpha', status: 'IN_SYNC' },
+    { path: 'D:/Brian/projects/beta', label: 'Beta', status: 'BEHIND' },
+  ]);
+  ui.search('Brian');
+  const output = ui.elements.get('#repositories').innerHTML;
+  assert.match(output, />Brian</);
+  assert.doesNotMatch(output, />Alpha<|>Beta</);
+  ui.search('  brian  ');
+  assert.doesNotMatch(ui.elements.get('#repositories').innerHTML, />Alpha<|>Beta</);
+  ui.search('D:\\BRIAN\\projects\\ALPHA');
+  assert.match(ui.elements.get('#repositories').innerHTML, />Alpha</);
+  assert.doesNotMatch(ui.elements.get('#repositories').innerHTML, />Brian<|>Beta</);
+  ui.search('D:/Brian/projects/');
+  assert.match(ui.elements.get('#repositories').innerHTML, />Alpha</);
+  assert.match(ui.elements.get('#repositories').innerHTML, />Beta</);
+  assert.doesNotMatch(ui.elements.get('#repositories').innerHTML, />Brian</);
+});
+
 test('last-known filters intersect search, exclude pending and preserve expansion on updates', () => {
   const rows = [
     { path: '/one/repo', label: 'repo', status: 'IN_SYNC', stale: true },

@@ -96,6 +96,7 @@
   "{0} unconfirmed; current attention count is incomplete.": "{0} 個尚未確認；目前需注意數量尚不完整。",
   "No repositories match your search and filter.": "沒有符合搜尋與篩選條件的儲存庫。",
   "Search repositories": "搜尋儲存庫",
+  "Name, or path with / or \\": "名稱，或含 /、\\ 的路徑",
   "Repository filters": "儲存庫篩選",
   "Attention": "需注意",
   "In sync": "已同步",
