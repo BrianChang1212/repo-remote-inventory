@@ -3,6 +3,8 @@
 ## Unreleased
 
 - Unify the dashboard and sidebar with shared inventory components, compact divided lists, and matching summary styling. Keep working-tree signals visible in narrow dashboard layouts.
+- Add dashboard name/path search and All, Attention, and In sync filters. Keep search, filters, and expanded repositories independent in each view across refreshes.
+- Use the same confirmed-result summary in both views: CURRENT counts confirmed results, while stale and pending results remain unconfirmed. Refreshing from either view updates both; a failed single-repository refresh leaves unrelated results unchanged.
 
 ## 0.3.1
 

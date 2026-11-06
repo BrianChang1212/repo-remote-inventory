@@ -14,6 +14,10 @@ The sidebar and dashboard share typography, controls, summary styling, and compa
 4. Use **Refresh all** in the sidebar to refresh every repository, or **Refresh repository** inside an expanded card to refresh one.
 5. Use the sidebar's **Auto refresh** control to enable or disable online refresh when the view opens. Select **Dashboard** to see status counts, a chart, and an expandable repository list in an editor tab. Each dashboard row has its own refresh button. Select a chart bar to filter the list, or clear the filter to show every repository.
 
+Both views support repository-name search, path search using `/` or `\`, and **All**, **Attention**, and **In sync** filters. Filters use the last known status, including cached results. Search, filters, and expanded repositories stay independent in each view and survive refreshes while those views remain open. A refresh from either view updates the shared results in both.
+
+The shared summary shows **TOTAL** repositories, **CURRENT** confirmed results, and **ATTENTION** among those confirmed results. **CURRENT** excludes stale and pending results; it is not an `IN_SYNC` count. When no results are confirmed, **ATTENTION** shows `—`. Unconfirmed results are reported separately, so stale cached results do not imply confirmed Git problems.
+
 ## Refresh modes and saved results
 
 Automatic mode refreshes when the sidebar or dashboard opens. Switching from manual to automatic mode starts a refresh immediately. If a refresh is already running, both views share that operation. Manual mode performs online queries only when you use a refresh command.
