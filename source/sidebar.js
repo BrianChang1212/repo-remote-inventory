@@ -1,6 +1,6 @@
 const crypto = require('node:crypto');
 const { englishT, htmlLang, format, formatDateTime, scriptJson } = require('./l10n');
-const { guideCss } = require('./style');
+const { guideCss, inventoryCss } = require('./style');
 const { noteStrings, translateNote } = require('./refresh-note');
 const { repositoryCounts } = require('./presentation');
 
@@ -125,42 +125,25 @@ vscode.postMessage({ command: 'ready' });
 `;
 
 const SIDEBAR_CSS = `
-body { min-height: 100vh; padding: 12px 10px 24px; overflow-wrap: anywhere; }
-.lede { margin: 8px 0 16px; color: var(--muted); font-size: 12px; }
-.metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; margin-bottom: 16px; }
-.metric { min-width: 0; }
-.controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
-#mode { grid-column: 1 / -1; text-align: left; padding: 7px 10px; }
+body { min-height: 100vh; padding: 16px; overflow-wrap: anywhere; }
+.controls > button { flex: 1 1 110px; }
+#mode { flex-basis: 100%; text-align: left; padding: 7px 10px; }
 #mode[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
 #mode::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 8px; border-radius: 50%; background: var(--muted); }
 #mode[aria-pressed="true"]::before { background: var(--accent); box-shadow: var(--glow); }
 .status { margin: 14px 0 17px; }
-.search { width: 100%; min-width: 0; margin: 0 0 9px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); color: var(--text); font: inherit; }
-.filters { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
-.filters button { min-width: 0; padding: 4px 8px; font-size: 11px; }
-.filters button[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
-.filter-hint { margin: 0 0 12px; font-size: 10px; color: var(--muted); }
-#repositories { border-top: 1px solid var(--line); }
-.repo { margin: 0; border-bottom: 1px solid var(--line); background: var(--surface); }
-.repo:hover, .repo[open] { background: var(--raised); }
-summary { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 8px; border-left: 2px solid transparent; cursor: pointer; list-style: none; }
-.repo[open] summary { border-left-color: var(--accent); }
-summary::-webkit-details-marker { display: none; }
+summary { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 11px 10px; min-height: 64px; }
 .repo-main { min-width: 0; }
 .repo-main strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .repo-main small { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .04em; }
 .repo-main .tag { margin-left: 6px; padding: 0 4px; font-size: 10px; }
 .freshness { margin-left: 6px; color: var(--warn); font-weight: 400; }
-.chevron { flex: none; color: var(--accent); font-size: 19px; line-height: 1; transition: transform .18s ease; }
-.repo[open] .chevron { transform: rotate(180deg); }
 .repo-body { padding: 0 10px 11px; border-top: 1px solid var(--line); }
 .signal { margin: 9px 0; font-size: 12px; }
-dl { display: grid; grid-template-columns: 82px minmax(0, 1fr); gap: 5px 8px; margin: 0 0 12px; font-size: 12px; }
-dt { color: var(--muted); } dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }
-.sha { font-family: var(--mono); font-size: 11px; }
+dl { grid-template-columns: 82px minmax(0, 1fr); gap: 5px 8px; margin: 0 0 12px; font-size: 12px; }
+.sha { font-size: 11px; }
 .path { color: var(--muted); }
 .row-action { width: 100%; }
-.note { color: var(--warn); overflow-wrap: anywhere; }
 `;
 
 function sidebarHtml(webview, autoMode, options = {}) {
@@ -170,7 +153,7 @@ function sidebarHtml(webview, autoMode, options = {}) {
   return `<!doctype html>
 <html lang="${htmlLang(options.language)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
-<style>${guideCss('sideBar')}${SIDEBAR_CSS}</style></head><body>
+<style>${guideCss('sideBar')}${inventoryCss}${SIDEBAR_CSS}</style></head><body>
 <header><p class="eyebrow">${t('REPOSITORY INTELLIGENCE')}</p><h1>${t('Remote inventory')}</h1><p class="lede">${t('Local worktrees and remote branch status')}</p></header>
 <section id="summary" class="metrics" aria-label="${t('Repository summary')}"></section>
 <nav class="controls" aria-label="${t('Inventory actions')}"><button id="mode" data-action="toggleAuto" aria-pressed="false">${t('Auto refresh')}</button><button id="refresh" class="primary" data-action="refresh">${t('Refresh all')}</button><button id="dashboard" data-action="openDashboard">${t('Dashboard ↗')}</button></nav>

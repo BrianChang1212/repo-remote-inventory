@@ -1,6 +1,6 @@
 const crypto = require('node:crypto');
 const { englishT, htmlLang, format, formatDateTime, scriptJson } = require('./l10n');
-const { guideCss } = require('./style');
+const { guideCss, inventoryCss } = require('./style');
 const { noteStrings, translateNote } = require('./refresh-note');
 
 // Strings drawn by the webview script; translated on the extension host (guide §2.3).
@@ -104,35 +104,30 @@ vscode.postMessage({ command: 'ready' });
 `;
 
 const DASHBOARD_CSS = `
-body { min-height: 100vh; padding: 24px; }
-h1 { margin: 0 0 12px; font-size: 1.7rem; line-height: 1.3; }
+body { min-height: 100vh; padding: 32px; }
+h1 { font-size: 28px; line-height: 1.3; }
 .bar { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
-.summary-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
-.summary-card { min-width: 110px; }
+#summary { max-width: 680px; }
+#summary .metric { padding: 15px 18px; }
+#summary .metric strong { font-size: 28px; }
 .track { height: 18px; flex: 1; background: var(--raised); }
 .fill { height: 100%; background: var(--accent); }
 .bar button { min-width: 205px; text-align: left; }
 #meta, #signals { color: var(--muted); }
-#rows { display: grid; gap: 7px; margin-top: 18px; }
-.repo { display: flex; align-items: flex-start; min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; box-shadow: inset 2px 0 0 var(--accent); }
-.repo:hover, .repo:has(details[open]) { border-color: var(--accent); }
+#rows { margin-top: 18px; }
+.repo { display: flex; align-items: flex-start; }
 .repo details { flex: 1; min-width: 0; }
 .repo-refresh { flex: none; margin: 7px; color: var(--accent); }
-summary { display: flex; gap: 12px; align-items: center; min-width: 0; padding: 12px; cursor: pointer; list-style: none; }
-summary::-webkit-details-marker { display: none; }
+summary { display: flex; gap: 12px; align-items: center; padding: 15px 16px; min-height: 66px; }
 .repo-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
 .repo-status { min-width: 90px; color: var(--accent); font-weight: 700; }
 .repo-status .tag { margin-left: 5px; }
 .repo-signal { min-width: 90px; }
-.chevron { color: var(--accent); }
-.repo details[open] .chevron { transform: rotate(180deg); }
 .repo-details { padding: 0 12px 12px; border-top: 1px solid var(--line); }
-dl { display: grid; grid-template-columns: 145px minmax(0, 1fr); gap: 6px 12px; }
-dt { color: var(--muted); } dd { margin: 0; overflow-wrap: anywhere; }
-.sha { font-family: var(--mono); }
+dl { grid-template-columns: 145px minmax(0, 1fr); }
 .dirty { color: var(--accent); }
-.note { color: var(--warn); overflow-wrap: anywhere; }
-@media (max-width: 800px) { body { padding: 12px; } .bar button { min-width: 120px; } .repo-status { min-width: 0; } .repo-signal { display: none; } dl { grid-template-columns: 1fr; } dt { margin-top: 6px; } }
+@media (max-width: 800px) { body { padding: 24px 18px; } .bar button { min-width: 120px; } summary { flex-wrap: wrap; gap: 8px; } .repo-name { flex-basis: 100%; } .repo-status, .repo-signal { min-width: 0; overflow-wrap: anywhere; } dl { grid-template-columns: 1fr; } dt { margin-top: 6px; } }
+@media (max-width: 400px) { #summary .metric { padding: 10px 6px; } #summary .metric strong { font-size: 22px; } .bar { flex-wrap: wrap; } .track { min-width: 80px; } }
 `;
 
 function dashboardHtml(webview, autoMode, options = {}) {
@@ -145,11 +140,11 @@ function dashboardHtml(webview, autoMode, options = {}) {
   <meta charset="utf-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <style>${guideCss('editor')}${DASHBOARD_CSS}</style>
+  <style>${guideCss('editor')}${inventoryCss}${DASHBOARD_CSS}</style>
 </head>
 <body>
-  <h1>${t('Repository inventory')}</h1>
-  <button id="mode"></button> <button class="primary" id="refresh">${t('Refresh')}</button>
+  <header><p class="eyebrow">${t('REPOSITORY INTELLIGENCE')}</p><h1>${t('Repository inventory')}</h1><p class="lede">${t('Local worktrees and remote branch status')}</p></header>
+  <nav class="controls" aria-label="${t('Inventory actions')}"><button id="mode"></button><button class="primary" id="refresh">${t('Refresh')}</button></nav>
   <section id="summary" class="summary-row" aria-label="${t('Repository summary')}"></section>
   <div id="meta"></div>
   <section id="chart"></section>

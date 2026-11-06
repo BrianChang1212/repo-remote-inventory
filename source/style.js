@@ -65,4 +65,35 @@ button.danger { background: transparent; border-color: var(--danger); color: var
 `;
 }
 
-module.exports = { guideCss };
+const inventoryCss = `
+h1 { letter-spacing: -.035em; }
+h2 { font-family: var(--mono); }
+.lede { margin: 10px 0 20px; color: var(--muted); font-size: 12px; }
+button { font-size: 12px; }
+#summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin: 18px 0 16px; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+#summary .metric { min-width: 0; padding: 12px 10px; border: 0; border-right: 1px solid var(--line); border-radius: 0; background: transparent; }
+#summary .metric:last-child { border-right: 0; }
+#summary .metric strong { margin-top: 3px; text-shadow: none; }
+.controls { display: flex; flex-wrap: wrap; gap: 6px; }
+.search { width: 100%; min-width: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); color: var(--text); font: inherit; }
+.filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 10px; }
+.filters button { min-width: 0; padding: 5px 10px; }
+.filters button[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
+.filter-hint { margin: 0 0 18px; font-size: 10px; color: var(--muted); }
+#rows, #repositories { border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+.repo { margin: 0; min-width: 0; border-bottom: 1px solid var(--line); background: transparent; }
+.repo:last-child { border-bottom: 0; }
+.repo:hover, .repo[open], .repo:has(details[open]) { background: var(--raised); }
+summary { min-width: 0; border-left: 2px solid transparent; cursor: pointer; list-style: none; }
+.repo[open] > summary, .repo details[open] > summary { border-left-color: var(--accent); }
+summary::-webkit-details-marker { display: none; }
+.chevron { flex: none; color: var(--accent); font-size: 19px; line-height: 1; transition: transform .18s ease; }
+.repo[open] .chevron, .repo details[open] .chevron { transform: rotate(180deg); }
+dl { display: grid; gap: 6px 12px; }
+dt { color: var(--muted); }
+dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+.sha { font-family: var(--mono); }
+.note { color: var(--warn); overflow-wrap: anywhere; }
+`;
+
+module.exports = { guideCss, inventoryCss };

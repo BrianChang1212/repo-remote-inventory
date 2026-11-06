@@ -4,6 +4,8 @@
 
 Inspect local Git working trees and remote branch status from a graphite-and-green VS Code sidebar and a dashboard tab. Automatic refresh is enabled by default. Switch between automatic and manual refresh from either view; the choice is saved in VS Code's global settings.
 
+The sidebar and dashboard share typography, controls, summary styling, and compact repository lists. The dashboard uses the available width for status and working-tree signals; narrow layouts keep those signals visible on wrapped rows. Both views follow dark, light, and high contrast themes and expose keyboard focus indicators.
+
 ## Usage
 
 1. Install the extension and ensure `git` is available on your `PATH`.
