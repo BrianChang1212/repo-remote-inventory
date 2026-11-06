@@ -92,5 +92,6 @@
   "Remote commit is not present locally": "本機沒有 remote 的 commit",
   "Cannot compare commit history": "無法比對 commit 歷史",
   "Invalid commit comparison": "commit 比對結果無效",
-  "Refresh failed": "重新整理失敗"
+  "Refresh failed": "重新整理失敗",
+  "{0} unconfirmed; current attention count is incomplete.": "{0} 個尚未確認；目前需注意數量尚不完整。"
 }

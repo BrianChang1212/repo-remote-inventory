@@ -9,6 +9,7 @@ function sidebarStrings(t) {
     total: t('TOTAL'), current: t('CURRENT'), attention: t('ATTENTION'),
     autoOn: t('Auto refresh: On'), autoOff: t('Auto refresh: Off'),
     lastKnown: t('Last known repository results'),
+    unconfirmed: t('{0} unconfirmed; current attention count is incomplete.'),
     emptyHint: t('Open a scan directory or refresh to find repositories.'),
     unnamed: t('Unnamed repository'), stale: t('Stale'),
     dirtyUnknown: t('Dirty unknown'), dirtyCount: t('{0} dirty'), clean: t('Clean worktree'),
@@ -37,25 +38,32 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({
 const value = (item, fallback = '—') => esc(item == null || item === '' ? fallback : item);
 
 function draw() {
-  const current = rows.filter(row => !row.stale);
-  const attention = rows.filter(row => row.stale || row.worktreeWarning || row.status !== 'IN_SYNC');
+  const current = rows.filter(row => !row.stale && row.status && row.status !== 'PENDING');
+  const attention = current.filter(row => row.worktreeWarning || row.status !== 'IN_SYNC');
+  const unconfirmed = rows.length - current.length;
+  const allStale = rows.length > 0 && rows.every(row => row.stale);
   document.querySelector('#summary').innerHTML = [
-    [S.total, rows.length], [S.current, current.length], [S.attention, attention.length],
+    [S.total, rows.length], [S.current, current.length], [S.attention, current.length ? attention.length : '—'],
   ].map(([label, count]) => '<div class="metric"><span>' + esc(label) + '</span><strong>' + count + '</strong></div>').join('');
   document.querySelector('#mode').textContent = autoMode ? S.autoOn : S.autoOff;
   document.querySelector('#mode').setAttribute('aria-pressed', String(autoMode));
-  document.querySelector('#status').textContent = message || (rows.length ? S.lastKnown : S.emptyHint);
+  document.querySelector('#status').textContent = [
+    message || (rows.length ? S.lastKnown : S.emptyHint),
+    allStale && message ? S.lastKnown : '',
+    unconfirmed ? format(S.unconfirmed, [unconfirmed]) : '',
+  ].filter(Boolean).join(' · ');
   document.querySelector('#repositories').innerHTML = rows.map(row => {
     const path = String(row.path || '');
-    const name = value(row.label && row.label !== '.' && row.label !== path ? row.label : path.split(String.fromCharCode(92)).at(-1).split('/').at(-1), S.unnamed);
+    const label = row.label && row.label !== '.' ? String(row.label) : path;
+    const name = value(label.split(String.fromCharCode(92)).at(-1).split('/').at(-1), S.unnamed);
     const status = value(row.status, 'PENDING');
-    const flag = row.stale ? '<span class="tag warn">' + esc(S.stale) + '</span>' : '';
+    const flag = row.stale && !allStale ? '<span class="freshness">' + esc(S.stale) + '</span>' : '';
     const dirty = row.worktreeWarning ? S.dirtyUnknown : row.dirty > 0 ? format(S.dirtyCount, [row.dirty]) : S.clean;
     const dirtyFlag = row.worktreeWarning ? '<span class="tag ok">' + esc(S.dirtyUnknownFlag) + '</span>' :
       row.dirty > 0 ? '<span class="tag ok">' + esc(format(S.dirtyCountFlag, [row.dirty])) + '</span>' : '';
     const timestamp = formatDateTime(row.lastSuccessAt || row.checkedAt);
     return '<details class="repo" data-path="' + esc(path) + '"' + (expanded.has(path) ? ' open' : '') + '>' +
-      '<summary title="' + esc(path) + '"><span class="repo-main"><strong>' + name + '</strong><small>' + status + flag + dirtyFlag + '</small></span><span class="chevron" aria-hidden="true">⌄</span></summary>' +
+      '<summary title="' + esc(label + ' · ' + path) + '"><span class="repo-main"><strong>' + name + '</strong><small>' + status + flag + dirtyFlag + '</small></span><span class="chevron" aria-hidden="true">⌄</span></summary>' +
       '<div class="repo-body"><div class="signal">' + esc(dirty) + '</div>' +
       '<dl><dt>' + esc(S.branch) + '</dt><dd>' + value(row.branch) + '</dd><dt>' + esc(S.compareTarget) + '</dt><dd>' + value(row.compareTarget) + '</dd>' +
       '<dt>' + esc(S.aheadBehind) + '</dt><dd>' + value(row.ahead, '0') + ' / ' + value(row.behind, '0') + '</dd>' +
@@ -89,7 +97,7 @@ vscode.postMessage({ command: 'ready' });
 `;
 
 const SIDEBAR_CSS = `
-body { min-height: 100vh; padding: 16px 14px 28px; }
+body { min-height: 100vh; padding: 12px 10px 24px; overflow-wrap: anywhere; }
 .lede { margin: 8px 0 16px; color: var(--muted); font-size: 12px; }
 .metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; margin-bottom: 16px; }
 .metric { min-width: 0; }
@@ -99,14 +107,17 @@ body { min-height: 100vh; padding: 16px 14px 28px; }
 #mode::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 8px; border-radius: 50%; background: var(--muted); }
 #mode[aria-pressed="true"]::before { background: var(--accent); box-shadow: var(--glow); }
 .status { margin: 14px 0 17px; }
-.repo { margin: 0 0 7px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); box-shadow: inset 2px 0 0 var(--accent); }
-.repo:hover, .repo[open] { border-color: var(--accent); }
-summary { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 10px; cursor: pointer; list-style: none; }
+#repositories { border-top: 1px solid var(--line); }
+.repo { margin: 0; border-bottom: 1px solid var(--line); background: var(--surface); }
+.repo:hover, .repo[open] { background: var(--raised); }
+summary { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 8px; border-left: 2px solid transparent; cursor: pointer; list-style: none; }
+.repo[open] summary { border-left-color: var(--accent); }
 summary::-webkit-details-marker { display: none; }
 .repo-main { min-width: 0; }
 .repo-main strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .repo-main small { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .04em; }
 .repo-main .tag { margin-left: 6px; padding: 0 4px; font-size: 10px; }
+.freshness { margin-left: 6px; color: var(--warn); font-weight: 400; }
 .chevron { flex: none; color: var(--accent); font-size: 19px; line-height: 1; transition: transform .18s ease; }
 .repo[open] .chevron { transform: rotate(180deg); }
 .repo-body { padding: 0 10px 11px; border-top: 1px solid var(--line); }

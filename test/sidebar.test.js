@@ -10,7 +10,10 @@ const { assertGuideCss } = require('./style-assertions');
 const zhT = (message, ...args) => format(bundle[message] ?? message, args);
 const CJK = /[\u3400-\u9fff]/;
 
-function runSidebar(html) {
+function runSidebar(html, rows = [
+  { path: '/a', label: 'alpha', status: 'IN_SYNC', stale: true, dirty: 2, branch: 'main', checkedAt: '2026-10-21T03:00:00Z' },
+  { path: '/b', label: 'beta', status: 'BEHIND', worktreeWarning: 'x' },
+]) {
   const script = html.match(/<script nonce="[^"]+">([\s\S]*?)<\/script>/)[1];
   const elements = new Map(['#repositories', '#summary', '#mode', '#status'].map(id => [id, { innerHTML: '', textContent: '', setAttribute() {} }]));
   let onMessage;
@@ -19,10 +22,7 @@ function runSidebar(html) {
     window: { addEventListener(type, handler) { if (type === 'message') onMessage = handler; } },
     acquireVsCodeApi: () => ({ postMessage() {} }),
   });
-  onMessage({ data: { type: 'state', autoMode: true, rows: [
-    { path: '/a', label: 'alpha', status: 'IN_SYNC', stale: true, dirty: 2, branch: 'main', checkedAt: '2026-10-21T03:00:00Z' },
-    { path: '/b', label: 'beta', status: 'BEHIND', worktreeWarning: 'x' },
-  ] } });
+  onMessage({ data: { type: 'state', autoMode: true, rows } });
   return elements;
 }
 
@@ -39,6 +39,59 @@ test('sidebar renders English text, lang="en", and no Chinese by default', () =>
   assert.match(elements.get('#repositories').innerHTML, /Compare target/);
   assert.match(elements.get('#repositories').innerHTML, /\d{2}-\d{2} \d{2}:\d{2}/);
   assert.doesNotMatch(elements.get('#repositories').innerHTML + elements.get('#summary').innerHTML, CJK);
+});
+
+test('sidebar separates confirmed attention from stale and pending results', () => {
+  const html = sidebarHtml({ cspSource: 'vscode-webview:' }, false);
+  const elements = runSidebar(html, [
+    { path: '/stale', status: 'BEHIND', stale: true },
+    { path: '/pending', status: 'PENDING' },
+    { path: '/clean', status: 'IN_SYNC', dirty: 3 },
+    { path: '/behind', status: 'BEHIND' },
+  ]);
+  assert.match(elements.get('#summary').innerHTML, /CURRENT<\/span><strong>2</);
+  assert.match(elements.get('#summary').innerHTML, /ATTENTION<\/span><strong>1</);
+  assert.match(elements.get('#status').textContent, /2 unconfirmed/);
+  const stale = runSidebar(html, [{ path: '/a', status: 'IN_SYNC', stale: true }, { path: '/b', status: 'BEHIND', stale: true }]);
+  assert.match(stale.get('#summary').innerHTML, /ATTENTION<\/span><strong>—</);
+  assert.doesNotMatch(stale.get('#repositories').innerHTML, />Stale</);
+  assert.match(stale.get('#status').textContent, /Last known repository results/);
+});
+
+test('path-like labels are compact while full paths and duplicate names remain identifiable', () => {
+  const elements = runSidebar(sidebarHtml({ cspSource: 'vscode-webview:' }, false), [
+    { path: 'D:/one/repo', label: '.agent-run/repo', status: 'IN_SYNC' },
+    { path: 'D:/two/repo', label: '.agent-run\\repo', status: 'IN_SYNC' },
+  ]);
+  const rendered = elements.get('#repositories').innerHTML;
+  assert.equal((rendered.match(/<strong>repo<\/strong>/g) || []).length, 2);
+  assert.match(rendered, /data-path="D:\/one\/repo"/);
+  assert.match(rendered, /data-path="D:\/two\/repo"/);
+});
+
+test('sidebar preserves expansion by full path when refresh fails and stale data remains', () => {
+  const script = sidebarHtml({ cspSource: 'vscode-webview:' }, false).match(/<script nonce="[^"]+">([\s\S]*?)<\/script>/)[1];
+  const elements = new Map(['#repositories', '#summary', '#mode', '#status'].map(id => [id, { innerHTML: '', textContent: '', setAttribute() {} }]));
+  const handlers = {};
+  let receive;
+  vm.runInNewContext(script, {
+    document: { querySelector: id => elements.get(id), addEventListener: (type, handler) => { handlers[type] = handler; } },
+    window: { addEventListener: (_type, handler) => { receive = handler; } },
+    acquireVsCodeApi: () => ({ postMessage() {} }),
+  });
+  const row = { path: '/one/repo', label: 'repo', status: 'IN_SYNC', branch: 'main' };
+  receive({ data: { type: 'state', rows: [row] } });
+  assert.match(elements.get('#summary').innerHTML, /ATTENTION<\/span><strong>0</);
+  handlers.toggle({ target: { closest: () => ({ open: true, dataset: { path: row.path } }) } });
+  receive({ data: { type: 'state', rows: [{ ...row, stale: true, refreshError: '<failed>' }, { path: '/two/repo', label: 'repo', status: 'PENDING' }] } });
+  assert.match(elements.get('#repositories').innerHTML, /data-path="\/one\/repo" open/);
+  assert.doesNotMatch(elements.get('#repositories').innerHTML, /data-path="\/two\/repo" open/);
+  assert.match(elements.get('#repositories').innerHTML, /&lt;failed&gt;/);
+  assert.match(elements.get('#repositories').innerHTML, />main</);
+  assert.match(elements.get('#summary').innerHTML, /ATTENTION<\/span><strong>—</);
+  receive({ data: { type: 'state', rows: [] } });
+  assert.match(elements.get('#repositories').innerHTML, /No repositories to display/);
+  assert.match(elements.get('#summary').innerHTML, /CURRENT<\/span><strong>0</);
 });
 
 test('sidebar renders zh-tw text from the host string table with lang="zh-Hant"', () => {
@@ -89,7 +142,8 @@ test('sidebar rows escape repository text, preserve stale state, and refresh onl
   onMessage({ data: { type: 'state', rows: [{ path: '/repo', label: '<img src=x>', status: 'IN_SYNC', stale: true, dirty: 2, branch: 'main' }], autoMode: false, message: 'Cached snapshot' } });
   assert.match(elements.get('#repositories').innerHTML, /&lt;img src=x&gt;/);
   assert.doesNotMatch(elements.get('#repositories').innerHTML, /<img/);
-  assert.match(elements.get('#repositories').innerHTML, /Stale/);
+  assert.doesNotMatch(elements.get('#repositories').innerHTML, />Stale</);
+  assert.match(elements.get('#status').textContent, /1 unconfirmed/);
   assert.doesNotMatch(elements.get('#repositories').innerHTML, /STALE|DIRTY/);
   assert.match(elements.get('#repositories').innerHTML, /2 dirty/);
   assert.match(elements.get('#mode').textContent, /Off/);
