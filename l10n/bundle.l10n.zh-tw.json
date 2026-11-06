@@ -35,8 +35,6 @@
   "Refresh {0}": "重新整理 {0}",
   "Stale: {0} · Dirty: {1}": "過期：{0} · 有變更：{1}",
   "All": "全部",
-  "In Sync": "已同步",
-  "Needs Attention": "需注意",
   "Stale": "過期",
   "{0} repositories · Last check: {1}": "{0} 個儲存庫 · 最後檢查：{1}",
   "{0} repositories · Last check: {1} · cached snapshot; stale until refreshed": "{0} 個儲存庫 · 最後檢查：{1} · 快取快照；重新整理前皆為過期",

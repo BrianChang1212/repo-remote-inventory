@@ -2,6 +2,7 @@ const crypto = require('node:crypto');
 const { englishT, htmlLang, format, formatDateTime, scriptJson } = require('./l10n');
 const { guideCss } = require('./style');
 const { noteStrings, translateNote } = require('./refresh-note');
+const { repositoryCounts, repositoryMatches } = require('./presentation');
 
 // Strings drawn by the webview script; translated on the extension host (guide §2.3).
 function dashboardStrings(t) {
@@ -10,7 +11,9 @@ function dashboardStrings(t) {
     branch: t('Branch'), compareTarget: t('Compare target'), aheadBehind: t('Ahead / behind'),
     localRemoteSha: t('Local / remote SHA'), lastCommitCheck: t('Last commit / check'), path: t('Path'),
     refreshNamed: t('Refresh {0}'), signals: t('Stale: {0} · Dirty: {1}'),
-    all: t('All'), inSync: t('In Sync'), needsAttention: t('Needs Attention'), staleCount: t('Stale'),
+    total: t('TOTAL'), current: t('CURRENT'), attention: t('ATTENTION'),
+    unconfirmed: t('{0} unconfirmed; current attention count is incomplete.'),
+    noRepositories: t('No repositories to display.'), noMatches: t('No repositories match your search and filter.'),
     meta: t('{0} repositories · Last check: {1}'),
     metaStale: t('{0} repositories · Last check: {1} · cached snapshot; stale until refreshed'),
     unknown: t('unknown'), modeAuto: t('Mode: Auto'), modeManual: t('Mode: Manual'),
@@ -24,8 +27,13 @@ const S = STRINGS;
 ${format.toString()}
 ${formatDateTime.toString()}
 ${translateNote.toString()}
+${repositoryCounts.toString()}
+${repositoryMatches.toString()}
 let rows = [];
 let filter = '';
+let query = '';
+let selected = 'all';
+let message = '';
 let auto = AUTO_MODE;
 const expanded = new Set();
 
@@ -45,7 +53,7 @@ function draw() {
     '<div class="track"><div class="fill" style="width:' + count / max * 100 + '%"></div></div></div>').join('');
 
   document.querySelector('#rows').innerHTML = rows
-    .filter(row => !filter || row.status === filter)
+    .filter(row => repositoryMatches(row, query, selected) && (!filter || row.status === filter))
     .map(row => '<article class="repo"><details data-path="' + esc(row.path) + '"' + (expanded.has(row.path) ? ' open' : '') + '>' +
       '<summary><span class="repo-name">' + esc(row.label || row.path) + '</span><span class="repo-status">' + esc(row.status) +
       (row.stale ? ' <b class="tag warn">' + esc(S.stale) + '</b>' : '') + '</span><span class="repo-signal">' +
@@ -58,19 +66,23 @@ function draw() {
       '<dt>' + esc(S.lastCommitCheck) + '</dt><dd>' + esc(row.lastCommit || '—') + ' / ' + esc(formatDateTime(row.lastSuccessAt || row.checkedAt) || '—') + '</dd>' +
       '<dt>' + esc(S.path) + '</dt><dd>' + esc(row.path) + '</dd></dl>' +
       (row.refreshError ? '<p class="note">' + esc(translateNote(row.refreshError, S.notes)) + '</p>' : '') + '</div></details>' +
-      '<button class="repo-refresh" data-action="refreshRepository" data-path="' + esc(row.path) + '" aria-label="' + esc(format(S.refreshNamed, [row.label || row.path])) + '">↻</button></article>').join('');
+      '<button class="repo-refresh" data-action="refreshRepository" data-path="' + esc(row.path) + '" aria-label="' + esc(format(S.refreshNamed, [row.label || row.path])) + '">↻</button></article>').join('') ||
+      '<div class="empty">' + esc(rows.length ? S.noMatches : S.noRepositories) + '</div>';
 
   document.querySelector('#signals').textContent = format(S.signals, [
     rows.filter(row => row.stale).length, rows.filter(row => row.worktreeWarning || row.dirty > 0).length]);
-  const needsAttention = rows.filter(row => row.stale || row.worktreeWarning || row.status !== 'IN_SYNC').length;
+  const totals = repositoryCounts(rows);
   document.querySelector('#summary').innerHTML = [
-    [S.all, rows.length],
-    [S.inSync, rows.filter(row => !row.stale && row.status === 'IN_SYNC').length],
-    [S.needsAttention, needsAttention],
-    [S.staleCount, rows.filter(row => row.stale).length],
+    [S.total, totals.total], [S.current, totals.current], [S.attention, totals.attention ?? '—'],
   ].map(([label, count]) => '<div class="metric summary-card"><span>' + esc(label) + '</span><strong>' + count + '</strong></div>').join('');
   document.querySelector('#meta').textContent = format(rows.some(row => row.stale) ? S.metaStale : S.meta,
-    [rows.length, window.checkedAt ? formatDateTime(window.checkedAt) : S.unknown]);
+    [rows.length, window.checkedAt ? formatDateTime(window.checkedAt) : S.unknown]) +
+    (totals.unconfirmed ? ' · ' + format(S.unconfirmed, [totals.unconfirmed]) : '');
+  const statusElement = document.querySelector('#status');
+  if (statusElement) statusElement.textContent = message;
+  for (const key of ['all', 'attention', 'sync']) {
+    document.querySelector('#filter-' + key)?.setAttribute('aria-pressed', String(selected === key));
+  }
   document.querySelector('#mode').textContent = auto ? S.modeAuto : S.modeManual;
   document.querySelectorAll('[data-status]').forEach(button => {
     button.onclick = () => { filter = button.dataset.status; draw(); };
@@ -80,6 +92,7 @@ function draw() {
 window.addEventListener('message', event => {
   if (event.data.type === 'rows') {
     rows = event.data.rows;
+    message = event.data.message || '';
     window.checkedAt = event.data.checkedAt;
     draw();
   } else if (event.data.type === 'mode') {
@@ -87,16 +100,28 @@ window.addEventListener('message', event => {
     draw();
   }
 });
-document.querySelector('#clear').onclick = () => { filter = ''; draw(); };
+document.querySelector('#clear').onclick = () => {
+  filter = ''; query = ''; selected = 'all';
+  document.querySelector('#search').value = '';
+  draw();
+};
+document.addEventListener('input', event => {
+  if (event.target.id !== 'search') return;
+  query = event.target.value;
+  draw();
+});
 document.querySelector('#mode').onclick = () => vscode.postMessage({ command: 'toggleAuto' });
 document.querySelector('#refresh').onclick = () => vscode.postMessage({ command: 'refresh' });
 document.addEventListener('toggle', event => {
+  if (event.target.isConnected === false) return;
   const card = event.target.closest('details[data-path]');
   if (!card) return;
   if (card.open) expanded.add(card.dataset.path);
   else expanded.delete(card.dataset.path);
 }, true);
 document.addEventListener('click', event => {
+  const statusFilter = event.target.closest('[data-filter]');
+  if (statusFilter) { selected = statusFilter.dataset.filter; filter = ''; draw(); return; }
   const button = event.target.closest('[data-action="refreshRepository"]');
   if (button) vscode.postMessage({ command: 'refreshRepository', path: button.dataset.path });
 });
@@ -152,9 +177,12 @@ function dashboardHtml(webview, autoMode, options = {}) {
   <button id="mode"></button> <button class="primary" id="refresh">${t('Refresh')}</button>
   <section id="summary" class="summary-row" aria-label="${t('Repository summary')}"></section>
   <div id="meta"></div>
+  <p id="status" class="status" role="status"></p>
   <section id="chart"></section>
   <p id="signals"></p>
   <button id="clear">${t('Clear filter')}</button>
+  <input id="search" class="search" type="search" aria-label="${t('Search repositories')}" placeholder="${t('Name, or path with / or \\')}">
+  <nav class="filters" aria-label="${t('Repository filters')}"><button id="filter-all" data-filter="all" aria-pressed="true">${t('All')}</button><button id="filter-attention" data-filter="attention" aria-pressed="false">${t('Attention')}</button><button id="filter-sync" data-filter="sync" aria-pressed="false">${t('In sync')}</button></nav>
   <section id="rows" aria-label="${t('Repositories')}"></section>
   <script nonce="${nonce}">${script}</script>
 </body>

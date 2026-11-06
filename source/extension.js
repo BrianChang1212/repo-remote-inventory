@@ -26,8 +26,8 @@ class InventoryProvider {
     this.changes.fire();
   }
 
-  markStale(error) {
-    this.rows = this.rows.map(row => ({
+  markStale(error, onlyPath) {
+    this.rows = this.rows.map(row => onlyPath && row.path !== onlyPath ? row : ({
       ...row, stale: true, lastSuccessAt: row.lastSuccessAt || row.checkedAt,
       lastAttemptAt: new Date().toISOString(), refreshError: error,
     }));
@@ -101,7 +101,7 @@ function start(vscode, context, dependencies = {}) {
     if (dashboard && dashboardReady) dashboard.webview.postMessage({ type: 'rows', rows: provider.rows, checkedAt: provider.rows.reduce((latest, row) => {
       const timestamp = row.lastSuccessAt || row.checkedAt || '';
       return timestamp > latest ? timestamp : latest;
-    }, '') });
+    }, ''), message: sidebarState.message });
   }
   function renderSidebar() {
     if (sidebar && sidebarReady) sidebar.webview.postMessage({
@@ -119,6 +119,7 @@ function start(vscode, context, dependencies = {}) {
   }
   function setSidebarMessage(message) {
     sidebarState.message = message;
+    renderDashboard();
     renderSidebar();
   }
   function setAutoMode(value) {
@@ -231,7 +232,7 @@ function start(vscode, context, dependencies = {}) {
       } catch (error) {
         const message = error?.message || String(error);
         if (requestGeneration === scopeGeneration) {
-          provider.markStale(message);
+          provider.markStale(message, onlyPath);
           if (requestScope) await state.update(requestScope, provider.rows);
           flushRender();
           setSidebarMessage(t('Refresh failed: {0}', message));

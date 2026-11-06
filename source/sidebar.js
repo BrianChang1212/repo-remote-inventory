@@ -2,7 +2,7 @@ const crypto = require('node:crypto');
 const { englishT, htmlLang, format, formatDateTime, scriptJson } = require('./l10n');
 const { guideCss } = require('./style');
 const { noteStrings, translateNote } = require('./refresh-note');
-const { repositoryCounts } = require('./presentation');
+const { repositoryCounts, repositoryMatches } = require('./presentation');
 
 // Strings drawn by the webview script; translated on the extension host (guide §2.3).
 function sidebarStrings(t) {
@@ -31,6 +31,7 @@ ${format.toString()}
 ${formatDateTime.toString()}
 ${translateNote.toString()}
 ${repositoryCounts.toString()}
+${repositoryMatches.toString()}
 let rows = [];
 let autoMode = AUTO_MODE;
 let message = '';
@@ -56,15 +57,7 @@ function draw() {
     allStale && message ? S.lastKnown : '',
     unconfirmedNote && !message.includes(unconfirmedNote) ? unconfirmedNote : '',
   ].filter(Boolean).join(' · ');
-  const needle = query.trim().toLowerCase().replaceAll(String.fromCharCode(92), '/');
-  const visible = rows.filter(row => {
-    const path = String(row.path || '').replaceAll(String.fromCharCode(92), '/');
-    const label = row.label && row.label !== '.' ? String(row.label) : path;
-    const name = label.replaceAll(String.fromCharCode(92), '/').split('/').at(-1);
-    const matches = (needle.includes('/') ? path : name).toLowerCase().includes(needle);
-    const attention = row.worktreeWarning || (row.status && row.status !== 'IN_SYNC' && row.status !== 'PENDING');
-    return matches && (selected === 'all' || (selected === 'sync' ? row.status === 'IN_SYNC' : attention));
-  });
+  const visible = rows.filter(row => repositoryMatches(row, query, selected));
   document.querySelector('#repositories').innerHTML = visible.map(row => {
     const path = String(row.path || '');
     const label = row.label && row.label !== '.' ? String(row.label) : path;

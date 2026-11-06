@@ -7,6 +7,59 @@ const { start: realStart, defaultResolveTargets } = require('../source/extension
 const { format } = require('../source/l10n');
 const zhBundle = require('../l10n/bundle.l10n.zh-tw.json');
 
+test('both webviews share all and single refresh results without staling unrelated rows on failure', async () => {
+  const messages = { sidebar: [], dashboard: [] };
+  const receive = {};
+  const subscriptions = [];
+  const view = name => ({
+    visible: true,
+    webview: { cspSource: 'vscode-webview:', postMessage: message => messages[name].push(structuredClone(message)), onDidReceiveMessage(handler) { receive[name] = handler; return { dispose() {} }; } },
+    onDidChangeVisibility: () => ({ dispose() {} }), onDidChangeViewState: () => ({ dispose() {} }), onDidDispose: () => ({ dispose() {} }), reveal() {},
+  });
+  const sidebar = view('sidebar');
+  const vscode = {
+    EventEmitter: class { event = handler => { this.handler = handler; return { dispose() {} }; }; fire() { this.handler?.(); } dispose() {} },
+    window: { registerWebviewViewProvider(_id, provider) { provider.resolveWebviewView(sidebar); return { dispose() {} }; }, createWebviewPanel: () => view('dashboard'), showErrorMessage: async () => {} },
+    workspace: { workspaceFolders: [{ uri: { scheme: 'file', fsPath: '/workspace' } }], getConfiguration: () => ({ get(key, fallback) { return key === 'autoRefreshOnOpen' ? false : fallback; } }), onDidChangeConfiguration: () => ({ dispose() {} }) },
+    commands: { registerCommand: () => ({ dispose() {} }), executeCommand: async () => {} }, ViewColumn: { Active: -1 },
+  };
+  const targets = [{ path: '/one', label: 'one' }, { path: '/two', label: 'two' }];
+  let fail = false;
+  let pass = 0;
+  const extension = realStart(vscode, { subscriptions }, {
+    resolveTargets: async () => ({ targets }),
+    scanTargets: async (_targets, options) => {
+      if (fail) throw new Error('network unavailable');
+      pass++;
+      return targets.map(target => options.onlyPath && target.path !== options.onlyPath
+        ? options.previous.find(row => row.path === target.path)
+        : { ...target, status: pass === 1 ? 'IN_SYNC' : 'BEHIND', dirty: pass, checkedAt: '2026-11-07T02:00:00Z', stale: false });
+    },
+  });
+  extension.openDashboard();
+  receive.sidebar({ command: 'ready' }); receive.dashboard({ command: 'ready' });
+  const sameResults = () => {
+    assert.deepEqual(messages.dashboard.at(-1).rows, messages.sidebar.at(-1).rows);
+    return messages.dashboard.at(-1);
+  };
+  try {
+    receive.sidebar({ command: 'refresh' }); await extension.whenIdle();
+    assert.equal(sameResults().rows[0].status, 'IN_SYNC');
+    receive.dashboard({ command: 'refreshRepository', path: '/one' }); await extension.whenIdle();
+    assert.equal(sameResults().rows[0].status, 'BEHIND');
+    assert.equal(sameResults().rows[1].status, 'IN_SYNC');
+    fail = true;
+    receive.sidebar({ command: 'refreshRepository', path: '/one' }); await extension.whenIdle();
+    const failed = sameResults();
+    assert.equal(failed.rows[0].stale, true);
+    assert.equal(failed.rows[1].stale, false, 'Only the selected repository failed to refresh');
+    assert.match(failed.message, /Refresh failed: network unavailable/);
+    fail = false;
+    receive.dashboard({ command: 'refresh' }); await extension.whenIdle();
+    assert.ok(sameResults().rows.every(row => !row.stale));
+  } finally { subscriptions.forEach(item => item?.dispose()); }
+});
+
 test('notifications, sidebar status, panel title, and webview HTML go through vscode.l10n.t', async () => {
   const calls = [];
   const errors = [];

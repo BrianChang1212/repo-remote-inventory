@@ -50,6 +50,16 @@ function repositoryCounts(rows) {
   };
 }
 
+function repositoryMatches(row, query, selected) {
+  const needle = query.trim().toLowerCase().replaceAll(String.fromCharCode(92), '/');
+  const path = String(row.path || '').replaceAll(String.fromCharCode(92), '/');
+  const label = row.label && row.label !== '.' ? String(row.label) : path;
+  const name = label.replaceAll(String.fromCharCode(92), '/').split('/').at(-1);
+  const matches = (needle.includes('/') ? path : name).toLowerCase().includes(needle);
+  const attention = row.worktreeWarning || (row.status && row.status !== 'IN_SYNC' && row.status !== 'PENDING');
+  return matches && (selected === 'all' || (selected === 'sync' ? row.status === 'IN_SYNC' : attention));
+}
+
 function summary(rows, t = englishT) {
   const counts = repositoryCounts(rows);
   const attention = counts.attention ?? '—';
@@ -63,4 +73,4 @@ function summary(rows, t = englishT) {
     : result;
 }
 
-module.exports = { sortedRows, rowDescription, rowDetails, summary, repositoryCounts };
+module.exports = { sortedRows, rowDescription, rowDetails, summary, repositoryCounts, repositoryMatches };
