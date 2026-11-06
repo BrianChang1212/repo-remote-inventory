@@ -2,6 +2,7 @@ const crypto = require('node:crypto');
 const { englishT, htmlLang, format, formatDateTime, scriptJson } = require('./l10n');
 const { guideCss } = require('./style');
 const { noteStrings, translateNote } = require('./refresh-note');
+const { repositoryCounts } = require('./presentation');
 
 // Strings drawn by the webview script; translated on the extension host (guide §2.3).
 function sidebarStrings(t) {
@@ -29,6 +30,7 @@ const S = STRINGS;
 ${format.toString()}
 ${formatDateTime.toString()}
 ${translateNote.toString()}
+${repositoryCounts.toString()}
 let rows = [];
 let autoMode = AUTO_MODE;
 let message = '';
@@ -41,13 +43,11 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({
 const value = (item, fallback = '—') => esc(item == null || item === '' ? fallback : item);
 
 function draw() {
-  const current = rows.filter(row => !row.stale && row.status && row.status !== 'PENDING');
-  const attention = current.filter(row => row.worktreeWarning || row.status !== 'IN_SYNC');
-  const unconfirmed = rows.length - current.length;
-  const unconfirmedNote = unconfirmed ? format(S.unconfirmed, [unconfirmed]) : '';
+  const counts = repositoryCounts(rows);
+  const unconfirmedNote = counts.unconfirmed ? format(S.unconfirmed, [counts.unconfirmed]) : '';
   const allStale = rows.length > 0 && rows.every(row => row.stale);
   document.querySelector('#summary').innerHTML = [
-    [S.total, rows.length], [S.current, current.length], [S.attention, current.length ? attention.length : '—'],
+    [S.total, counts.total], [S.current, counts.current], [S.attention, counts.attention ?? '—'],
   ].map(([label, count]) => '<div class="metric"><span>' + esc(label) + '</span><strong>' + count + '</strong></div>').join('');
   document.querySelector('#mode').textContent = autoMode ? S.autoOn : S.autoOff;
   document.querySelector('#mode').setAttribute('aria-pressed', String(autoMode));

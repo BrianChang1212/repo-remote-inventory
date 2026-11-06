@@ -40,17 +40,27 @@ function rowDetails(row) {
   return details;
 }
 
-function summary(rows, t = englishT) {
+function repositoryCounts(rows) {
   const current = rows.filter(row => !row.stale && row.status && row.status !== 'PENDING');
-  const attention = current.length ? current.filter(row => row.worktreeWarning || row.status !== 'IN_SYNC').length : '—';
+  return {
+    total: rows.length,
+    current: current.length,
+    attention: current.length ? current.filter(row => row.worktreeWarning || row.status !== 'IN_SYNC').length : null,
+    unconfirmed: rows.length - current.length,
+  };
+}
+
+function summary(rows, t = englishT) {
+  const counts = repositoryCounts(rows);
+  const attention = counts.attention ?? '—';
   const dirty = rows.filter(row => row.dirty > 0).length;
   const unknown = rows.filter(row => row.worktreeWarning).length;
   const result = unknown
-    ? t('{0} repositories · {1} needs attention · {2} dirty · {3} dirty unknown', rows.length, attention, dirty, unknown)
-    : t('{0} repositories · {1} needs attention · {2} dirty', rows.length, attention, dirty);
-  return rows.length > current.length
-    ? result + ' · ' + t('{0} unconfirmed; current attention count is incomplete.', rows.length - current.length)
+    ? t('{0} repositories · {1} needs attention · {2} dirty · {3} dirty unknown', counts.total, attention, dirty, unknown)
+    : t('{0} repositories · {1} needs attention · {2} dirty', counts.total, attention, dirty);
+  return counts.unconfirmed
+    ? result + ' · ' + t('{0} unconfirmed; current attention count is incomplete.', counts.unconfirmed)
     : result;
 }
 
-module.exports = { sortedRows, rowDescription, rowDetails, summary };
+module.exports = { sortedRows, rowDescription, rowDetails, summary, repositoryCounts };

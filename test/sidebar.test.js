@@ -107,6 +107,21 @@ test('refresh completion shows its unconfirmed warning only once', () => {
   assert.equal(ui.elements.get('#status').textContent.match(/1 unconfirmed/g).length, 1);
 });
 
+test('host completion and sidebar metrics agree on confirmed attention', () => {
+  const rows = [
+    { path: '/cached', status: 'BEHIND', stale: true },
+    { path: '/waiting', status: 'PENDING' },
+    { path: '/dirty', status: 'IN_SYNC', dirty: 2 },
+    { path: '/warning', status: 'IN_SYNC', worktreeWarning: 'unknown' },
+  ];
+  const ui = interactiveSidebar(rows);
+  ui.update(rows, summary(rows));
+  assert.match(ui.elements.get('#status').textContent, /4 repositories · 1 needs attention/);
+  assert.match(ui.elements.get('#summary').innerHTML, /TOTAL<\/span><strong>4</);
+  assert.match(ui.elements.get('#summary').innerHTML, /CURRENT<\/span><strong>2</);
+  assert.match(ui.elements.get('#summary').innerHTML, /ATTENTION<\/span><strong>1</);
+});
+
 function runSidebar(html, rows = [
   { path: '/a', label: 'alpha', status: 'IN_SYNC', stale: true, dirty: 2, branch: 'main', checkedAt: '2026-10-21T03:00:00Z' },
   { path: '/b', label: 'beta', status: 'BEHIND', worktreeWarning: 'x' },
