@@ -124,7 +124,7 @@ const SIDEBAR_CSS = `
 body { font-size: 13px; line-height: 1.5; }
 h1 { font-size: 18px; letter-spacing: .035em; }
 h2 { font-family: var(--mono); }
-.card, .metric { background: var(--surface); border: 0; border-radius: 12px; box-shadow: none; }
+.card, .metric { background: color-mix(in srgb, var(--accent) 5%, var(--surface)); border: 0; border-radius: 12px; box-shadow: none; }
 .card::before { display: none; }
 .metric strong { text-shadow: none; }
 button { min-height: 28px; padding: 4px 12px; border: 0; border-radius: 980px; font-size: 12.5px; font-weight: 500;
