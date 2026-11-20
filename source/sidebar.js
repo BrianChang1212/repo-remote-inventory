@@ -118,10 +118,45 @@ vscode.postMessage({ command: 'ready' });
 `;
 
 const SIDEBAR_CSS = `
-body { min-height: 100vh; padding: 16px; overflow-wrap: anywhere; }
+/* sidebar-family:begin */
+/* Task Reports sidebar family. Distributed at build time; no runtime dependency. */
+/* Rounded borderless cards, pill buttons, fill inputs. References guide variables only. */
+body { font-size: 13px; line-height: 1.5; }
+h1 { font-size: 18px; letter-spacing: .035em; }
+h2 { font-family: var(--mono); }
+.card, .metric { background: var(--surface); border: 0; border-radius: 12px; box-shadow: none; }
+.card::before { display: none; }
+.metric strong { text-shadow: none; }
+button { min-height: 28px; padding: 4px 12px; border: 0; border-radius: 980px; font-size: 12.5px; font-weight: 500;
+  background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); transition: filter .15s; }
+button:hover:not(:disabled) { filter: brightness(1.15); color: var(--accent); }
+button.primary { background: var(--accent); color: var(--accent-fg); font-weight: 600; }
+button.primary:hover:not(:disabled) { color: var(--accent-fg); }
+button.danger { background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger); }
+button.danger:hover:not(:disabled) { color: var(--danger); }
+input, select, textarea { border: 0; border-radius: 10px; background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--text); font: inherit; }
+input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--focus); outline-offset: 0; }
+body.vscode-high-contrast button, body.vscode-high-contrast-light button { border: 1px solid var(--accent); background: transparent; color: var(--text); }
+body.vscode-high-contrast input, body.vscode-high-contrast select, body.vscode-high-contrast textarea,
+body.vscode-high-contrast-light input, body.vscode-high-contrast-light select, body.vscode-high-contrast-light textarea { border: 1px solid var(--line); background: transparent; }
+body.vscode-high-contrast .card, body.vscode-high-contrast .metric,
+body.vscode-high-contrast-light .card, body.vscode-high-contrast-light .metric { border: 1px solid var(--line); }
+/* sidebar-family:end */
+body { min-height: 100vh; padding: 0 16px 16px; overflow-wrap: anywhere; }
+header { position: sticky; top: 0; z-index: 5; margin: 0 -16px 14px; padding: 14px 16px 10px; background: color-mix(in srgb, var(--base) 72%, transparent); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); border-bottom: 1px solid var(--line); }
+header .lede { margin: 4px 0 0; }
+#summary { margin: 0 0 12px; border: 0; border-radius: 12px; background: color-mix(in srgb, var(--accent) 5%, var(--surface)); }
+.search { padding: 7px 12px; border: 0; border-radius: 10px; background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.filters button[aria-pressed="true"] { border-color: transparent; background: var(--accent); color: var(--accent-fg); }
+#rows, #repositories { border: 0; border-radius: 12px; background: color-mix(in srgb, var(--accent) 5%, var(--surface)); }
+.tag { border: 0; border-radius: 980px; padding: 0 8px; background: color-mix(in srgb, var(--muted) 16%, transparent); }
+.tag.ok { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.tag.warn { background: color-mix(in srgb, var(--warn) 16%, transparent); }
+.tag.danger { background: color-mix(in srgb, var(--danger) 16%, transparent); }
+body.vscode-high-contrast #summary, body.vscode-high-contrast-light #summary, body.vscode-high-contrast #rows, body.vscode-high-contrast-light #rows, body.vscode-high-contrast #repositories, body.vscode-high-contrast-light #repositories { border: 1px solid var(--line); }
 .controls > button { flex: 1 1 110px; }
 #mode { flex-basis: 100%; text-align: left; padding: 7px 10px; }
-#mode[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+#mode[aria-pressed="true"] { background: color-mix(in srgb, var(--accent) 24%, transparent); color: var(--accent); }
 #mode::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 8px; border-radius: 50%; background: var(--muted); }
 #mode[aria-pressed="true"]::before { background: var(--accent); box-shadow: var(--glow); }
 .status { margin: 14px 0 17px; }
@@ -129,7 +164,7 @@ summary { display: flex; justify-content: space-between; gap: 8px; align-items: 
 .repo-main { min-width: 0; }
 .repo-main strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .repo-main small { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .04em; }
-.repo-main .tag { margin-left: 6px; padding: 0 4px; font-size: 10px; }
+.repo-main .tag { margin-left: 6px; padding: 0 8px; font-size: 10px; }
 .freshness { margin-left: 6px; color: var(--warn); font-weight: 400; }
 .repo-body { padding: 0 10px 11px; border-top: 1px solid var(--line); }
 .signal { margin: 9px 0; font-size: 12px; }
