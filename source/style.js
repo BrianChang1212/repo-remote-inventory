@@ -78,17 +78,17 @@ h1 { letter-spacing: -.035em; }
 h2 { font-family: var(--mono); }
 .lede { margin: 10px 0 20px; color: var(--muted); font-size: 12px; }
 button { font-size: 12px; }
-#summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin: 18px 0 16px; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+#summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin: 18px 0 16px; border: 0; border-radius: 12px; background: color-mix(in srgb, var(--accent) 5%, var(--surface)); overflow: hidden; }
 #summary .metric { min-width: 0; padding: 12px 10px; border: 0; border-right: 1px solid var(--line); border-radius: 0; background: transparent; }
 #summary .metric:last-child { border-right: 0; }
 #summary .metric strong { margin-top: 3px; text-shadow: none; }
 .controls { display: flex; flex-wrap: wrap; gap: 6px; }
-.search { width: 100%; min-width: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); color: var(--text); font: inherit; }
+.search { width: 100%; min-width: 0; padding: 10px 12px; border: 0; border-radius: 10px; background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--text); font: inherit; }
 .filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 10px; }
 .filters button { min-width: 0; padding: 5px 10px; }
-.filters button[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
+.filters button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
 .filter-hint { margin: 0 0 18px; font-size: 10px; color: var(--muted); }
-#rows, #repositories { border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+#rows, #repositories { border: 0; border-radius: 12px; background: color-mix(in srgb, var(--accent) 5%, var(--surface)); overflow: hidden; }
 .repo { margin: 0; min-width: 0; border-bottom: 1px solid var(--line); background: transparent; }
 .repo:last-child { border-bottom: 0; }
 .repo:hover, .repo[open], .repo:has(details[open]) { background: var(--raised); }
