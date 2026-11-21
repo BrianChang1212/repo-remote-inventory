@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add the dark fixed palette (`--base`, `--surface`, `--raised`, `--line`) and `--in-progress` to the guide CSS so cards no longer fall back to the grey VS Code theme colours.
+- Round the summary, repository list, search box and filter buttons to the sidebar family look (12px borderless cards, 10px fill input); the selected filter is a solid accent pill.
+- Add the neutral disabled look for disabled danger buttons (synced from the shared template).
 - Unify the dashboard and sidebar with shared inventory components, compact divided lists, and matching summary styling. Keep working-tree signals visible in narrow dashboard layouts.
 - Add dashboard name/path search and All, Attention, and In sync filters. Keep search, filters, and expanded repositories independent in each view across refreshes.
 - Use the same confirmed-result summary in both views: CURRENT counts confirmed results, while stale and pending results remain unconfirmed. Refreshing from either view updates both; a failed single-repository refresh leaves unrelated results unchanged.
